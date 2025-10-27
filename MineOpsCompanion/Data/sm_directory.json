@@ -1,0 +1,28 @@
+{
+  "superManagers": [
+    {
+      "name": "Mr. Edmund",
+      "role": "Warehouse",
+      "baseBoost": 2.5,
+      "maxBoost": 650,
+      "boostType": "Warehouse Income",
+      "cost": 100
+    },
+    {
+      "name": "Freesia",
+      "role": "Transport",
+      "baseBoost": 2.0,
+      "maxBoost": 480,
+      "boostType": "Transport Speed",
+      "cost": 80
+    },
+    {
+      "name": "H4V0C",
+      "role": "Mine",
+      "baseBoost": 1.8,
+      "maxBoost": 400,
+      "boostType": "Mine Income",
+      "cost": 75
+    }
+  ]
+}
