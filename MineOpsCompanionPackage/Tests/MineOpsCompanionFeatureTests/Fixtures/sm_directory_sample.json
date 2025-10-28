@@ -1,0 +1,159 @@
+[
+  {
+    "id": "mr_edmund",
+    "name": "Mr Edmund",
+    "department": "warehouse",
+    "rarity": "epic",
+    "active": {
+      "name": "Deepest Shaft Cash Convert",
+      "type": "warehouse_cash_convert",
+      "duration_seconds": 120,
+      "cooldown_seconds": 900,
+      "multiplier": 3.38
+    },
+    "aliases": ["Mr. Edmund", "Edmund"],
+    "notes": "Warehouse burst finisher; overlap with Turner during cash-out."
+  },
+  {
+    "id": "dr_lilly",
+    "name": "Dr Lilly",
+    "department": "elevator",
+    "rarity": "epic",
+    "active": {
+      "name": "Beam to Warehouse",
+      "type": "beam_elevator_to_warehouse",
+      "duration_seconds": 300,
+      "cooldown_seconds": 900,
+      "multiplier": 1.0
+    },
+    "aliases": ["Dr. Lilly", "Lilly"],
+    "notes": "Beams elevator load directly to WH; use to prevent E/W choke."
+  },
+  {
+    "id": "mr_turner",
+    "name": "Mr Turner",
+    "department": "mineshaft",
+    "rarity": "rare",
+    "active": {
+      "name": "Piggy Bank",
+      "type": "piggy_bank",
+      "duration_seconds": 30,
+      "cooldown_seconds": 900,
+      "multiplier": 11.63
+    },
+    "aliases": ["Turner"],
+    "notes": "Trigger only when miners are already walking in."
+  },
+  {
+    "id": "thalia",
+    "name": "Thalia",
+    "department": "mineshaft",
+    "rarity": "epic",
+    "active": {
+      "name": "Beam to Elevator",
+      "type": "beam_to_elevator",
+      "duration_seconds": 300,
+      "cooldown_seconds": 900,
+      "multiplier": 7.5
+    },
+    "aliases": ["Thalia"],
+    "notes": "Pairs with Lilly for Thalia→E→beam→WH cash-out."
+  },
+  {
+    "id": "damian_jones",
+    "name": "Damian Jones",
+    "department": "elevator",
+    "rarity": "rare",
+    "active": {
+      "name": "Elevator Sprint",
+      "type": "elevator_speed",
+      "duration_seconds": 300,
+      "cooldown_seconds": 900,
+      "multiplier": 6.03
+    },
+    "passives": [
+      {"kind": "elevator_upgrade_cost_reduction", "value": 0.15, "unlocked": false},
+      {"kind": "mine_income_factor", "value": 1.05, "unlocked": false}
+    ],
+    "aliases": ["Damian"],
+    "notes": "Promo to unlock E cost↓; great during push windows."
+  },
+  {
+    "id": "chris_capella",
+    "name": "Chris Capella",
+    "department": "warehouse",
+    "rarity": "rare",
+    "active": {
+      "name": "Warehouse Walk Speed",
+      "type": "warehouse_speed",
+      "duration_seconds": 300,
+      "cooldown_seconds": 900,
+      "multiplier": 6.42
+    },
+    "passives": [
+      {"kind": "idle_income", "value": 1.10, "unlocked": false}
+    ],
+    "aliases": ["Capella"],
+    "notes": "Solid idle WH manager; swap to Mark for push movement."
+  },
+  {
+    "id": "mark",
+    "name": "Mark",
+    "department": "warehouse",
+    "rarity": "rare",
+    "active": {
+      "name": "Warehouse Walk Speed",
+      "type": "warehouse_speed",
+      "duration_seconds": 300,
+      "cooldown_seconds": 900,
+      "multiplier": 5.24
+    },
+    "aliases": ["Mark"],
+    "notes": "Use during pushes to flush the ramp."
+  },
+  {
+    "id": "lee_vatori",
+    "name": "Lee Vatori",
+    "department": "elevator",
+    "rarity": "rare",
+    "active": {
+      "name": "Elevator Walk Speed",
+      "type": "elevator_speed",
+      "duration_seconds": 300,
+      "cooldown_seconds": 900,
+      "multiplier": 4.67
+    },
+    "aliases": ["Lee"],
+    "notes": "Backup E speed when Lilly/Damian are cooling."
+  },
+  {
+    "id": "chester",
+    "name": "Chester",
+    "department": "mineshaft",
+    "rarity": "epic",
+    "active": {
+      "name": "Mineshaft Speed",
+      "type": "mineshaft_speed",
+      "duration_seconds": 300,
+      "cooldown_seconds": 900,
+      "multiplier": 4.0
+    },
+    "aliases": ["Chester"],
+    "notes": "Use briefly to stuff the crate before cash-out."
+  },
+  {
+    "id": "h4v0c",
+    "name": "H4V0C",
+    "department": "mineshaft",
+    "rarity": "epic",
+    "active": {
+      "name": "Every 4th Drop Multiplied + Beam",
+      "type": "mineshaft_beam_multiply_every_4",
+      "duration_seconds": 180,
+      "cooldown_seconds": 900,
+      "multiplier": 3.0
+    },
+    "aliases": ["HAVOC", "H4VOC"],
+    "notes": "Run with Lilly when E/W lag deeper shafts."
+  }
+]

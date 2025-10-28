@@ -1,0 +1,112 @@
+[
+  {
+    "name": "Mr. Edmund",
+    "role": "Warehouse",
+    "boostType": "Warehouse Speed",
+    "baseBoost": 250,
+    "maxBoost": 750,
+    "availability": "Mainland",
+    "cost": 1200000,
+    "synergy": ["Lee Vatori", "Mrs. Goodman"],
+    "imageName": "mr_edmund"
+  },
+  {
+    "name": "Freesia",
+    "role": "Transport",
+    "boostType": "Transport Speed",
+    "baseBoost": 180,
+    "maxBoost": 600,
+    "availability": "Mainland",
+    "cost": 950000,
+    "synergy": ["H4V0C"],
+    "imageName": "freesia"
+  },
+  {
+    "name": "H4V0C",
+    "role": "Mine",
+    "boostType": "Mining Speed",
+    "baseBoost": 220,
+    "maxBoost": 700,
+    "availability": "Mainland",
+    "cost": 1050000,
+    "synergy": ["Freesia"],
+    "imageName": "havoc"
+  },
+  {
+    "name": "Mrs. Goodman",
+    "role": "Warehouse",
+    "boostType": "Loading Efficiency",
+    "baseBoost": 140,
+    "maxBoost": 480,
+    "availability": "Continent 3",
+    "cost": 875000,
+    "synergy": ["Goodman Jr."],
+    "imageName": "mrs_goodman"
+  },
+  {
+    "name": "Goodman Jr.",
+    "role": "Transport",
+    "boostType": "Transport Multiplier",
+    "baseBoost": 100,
+    "maxBoost": 400,
+    "availability": "Continent 3",
+    "cost": 700000,
+    "synergy": ["Mrs. Goodman"],
+    "imageName": "goodman_jr"
+  },
+  {
+    "name": "Lee Vatori",
+    "role": "Mine",
+    "boostType": "Mining Multiplier",
+    "baseBoost": 200,
+    "maxBoost": 620,
+    "availability": "Mainland",
+    "cost": 980000,
+    "synergy": ["Mr. Edmund"],
+    "imageName": "lee_vatori"
+  },
+  {
+    "name": "Cliff Walker",
+    "role": "Mine",
+    "boostType": "Drill Power",
+    "baseBoost": 160,
+    "maxBoost": 500,
+    "availability": "Continent 2",
+    "cost": 800000,
+    "synergy": ["Dr. Lilly"],
+    "imageName": "cliff_walker"
+  },
+  {
+    "name": "Dr. Lilly",
+    "role": "Warehouse",
+    "boostType": "Storage Capacity",
+    "baseBoost": 190,
+    "maxBoost": 580,
+    "availability": "Continent 2",
+    "cost": 870000,
+    "synergy": ["Cliff Walker"],
+    "imageName": "dr_lilly"
+  },
+  {
+    "name": "Damian Jones",
+    "role": "Transport",
+    "boostType": "Transport Efficiency",
+    "baseBoost": 210,
+    "maxBoost": 640,
+    "availability": "Continent 4",
+    "cost": 1020000,
+    "synergy": ["Chris Capella"],
+    "imageName": "damian_jones"
+  },
+  {
+    "name": "Chris Capella",
+    "role": "Mine",
+    "boostType": "Ore Extraction Rate",
+    "baseBoost": 230,
+    "maxBoost": 680,
+    "availability": "Continent 4",
+    "cost": 1080000,
+    "synergy": ["Damian Jones"],
+    "imageName": "chris_capella"
+  }
+]
