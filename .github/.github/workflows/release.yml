@@ -1,0 +1,126 @@
+name: 🏗️ MineOps Companion CI & Auto-Release
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build-and-test:
+    name: 🧪 Build & Test Swift Project
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.4'
+
+      - name: Verify Xcode project
+        run: |
+          echo "Checking for project files..."
+          ls -la
+          if [ ! -d "MineOpsCompanion.xcodeproj" ]; then
+            echo "::warning::No Xcode project found. Skipping build."
+            exit 0
+          fi
+
+      - name: Build App
+        run: |
+          xcodebuild clean build \
+          -project MineOpsCompanion.xcodeproj \
+          -scheme MineOpsCompanion \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
+          CODE_SIGNING_ALLOWED=NO
+
+      - name: Run Unit Tests
+        run: |
+          if [ -d "MineOpsCompanion.xcodeproj" ]; then
+            xcodebuild test \
+            -project MineOpsCompanion.xcodeproj \
+            -scheme MineOpsCompanion \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro' \
+            CODE_SIGNING_ALLOWED=NO
+          else
+            echo "::notice::Skipping tests (no Xcode project)."
+          fi
+
+  changelog-verify:
+    name: 🧾 Validate CHANGELOG
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure CHANGELOG has Unreleased or matching version header
+        run: |
+          if ! grep -qE "## $begin:math:display$v[0-9]+\\.[0-9]+\\.[0-9]+$end:math:display$" CHANGELOG.md && ! grep -q "## $begin:math:display$Unreleased$end:math:display$" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md missing version header."
+            exit 1
+          fi
+          echo "CHANGELOG validated successfully ✅"
+
+  auto-version-tag:
+    name: 🏷️ Auto-Tag & Draft Release
+    runs-on: ubuntu-latest
+    needs: [build-and-test, changelog-verify]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: version
+        run: |
+          latest=$(git describe --tags --abbrev=0 || echo "v0.0.0")
+          echo "Latest tag: $latest"
+          patch=${latest##*.}
+          minor=${latest%.*}; minor=${minor##*.}
+          major=${latest%%.*}; major=${major#v}
+          new_patch=$((patch + 1))
+          next="v${major}.${minor}.${new_patch}"
+          echo "next_version=$next" >> $GITHUB_OUTPUT
+
+      - name: Tag new version
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git tag -a "${{ steps.version.outputs.next_version }}" -m "Automated patch release"
+          git push origin "${{ steps.version.outputs.next_version }}"
+
+      - name: Create Draft Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.next_version }}
+          name: "Release ${{ steps.version.outputs.next_version }}"
+          body_path: CHANGELOG.md
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify-success:
+    name: ✅ Notify Release Success
+    runs-on: ubuntu-latest
+    needs: auto-version-tag
+    if: success()
+
+    steps:
+      - name: Summary
+        run: |
+          echo "🎉 Build, test, and release tagging completed successfully!"
+          echo "MineOps Companion is ready for review and publishing."

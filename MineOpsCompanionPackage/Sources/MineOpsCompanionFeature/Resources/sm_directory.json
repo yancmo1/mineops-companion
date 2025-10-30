@@ -109,4 +109,10 @@
     "synergy": ["Damian Jones"],
     "imageName": "chris_capella"
   }
+  ,
+  {"name":"Mr. Turner","role":"Mine","boostType":"Piggy Bank","baseBoost":1163,"availability":"Mainland","aliases":["Mr Turner","Turner"],"imageName":"mr_turner"},
+  {"name":"Thalia","role":"Mine","boostType":"Beam to Elevator","baseBoost":750,"availability":"Event","aliases":["Thalia"],"imageName":"thalia"},
+  {"name":"Chester","role":"Mine","boostType":"Mineshaft Speed","baseBoost":400,"availability":"Mainland","aliases":["Chester"],"imageName":"chester"},
+  {"name":"Mark","role":"Warehouse","boostType":"Warehouse Walk Speed","baseBoost":524,"availability":"Mainland","aliases":["Mark"],"imageName":"mark"},
+  {"name":"Al Titude","role":"Warehouse","boostType":"Warehouse Multiplier","baseBoost":600,"availability":"Mainland","aliases":["Al Titude","AlTitude"],"imageName":"al_titude"}
 ]

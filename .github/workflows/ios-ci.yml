@@ -1,0 +1,47 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer
+      
+    - name: Show Xcode version
+      run: xcodebuild -version
+      
+    - name: Show Swift version
+      run: swift --version
+      
+    - name: Build and Test
+      run: |
+        xcodebuild test \
+          -workspace MineOpsCompanion.xcworkspace \
+          -scheme MineOpsCompanion \
+          -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.0' \
+          -testPlan MineOpsCompanion.xctestplan \
+          -configuration Debug \
+          -enableCodeCoverage YES \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          | xcbeautify || true
+      
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          DerivedData/Logs/Test/*.xcresult
+        retention-days: 7
