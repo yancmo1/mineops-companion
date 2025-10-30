@@ -17,23 +17,22 @@ public struct SMDirectoryEntry: Decodable, Identifiable, Hashable {
   public let id: String
   public let name: String
   public let department: String   // "mineshaft" | "elevator" | "warehouse"
-  public let rarity: String       // optional in v0; default "unknown"
+  public let rarity: String
   public let active: Active?
   public let passives: [Passive]?
   public let aliases: [String]?
   public let notes: String?
 
-  // MARK: - Back-compat decoder (supports your current JSON shape)
   enum K: CodingKey {
     case id, name, department, rarity, active, passives, aliases, notes
-    // v0 keys:
+    // legacy keys we normalize:
     case role, boostType, baseBoost, maxBoost, availability, cost, synergy, imageName
   }
 
   public init(from d: Decoder) throws {
     let c = try d.container(keyedBy: K.self)
 
-    // If already new schema, decode straight.
+    // New-schema fast path
     if c.contains(.department) || c.contains(.active) {
       id         = try c.decodeIfPresent(String.self, forKey: .id) ?? Self.slug(try c.decode(String.self, forKey: .name))
       name       = try c.decode(String.self, forKey: .name)
@@ -46,21 +45,17 @@ public struct SMDirectoryEntry: Decodable, Identifiable, Hashable {
       return
     }
 
-    // v0 shape → normalize
+    // Legacy-schema → normalize
     let rawName  = try c.decode(String.self, forKey: .name)
     let rawRole  = try c.decode(String.self, forKey: .role)        // "Mine" | "Transport" | "Warehouse"
     let boost    = try c.decodeIfPresent(Int.self, forKey: .baseBoost) ?? 0
     let boostLbl = try c.decodeIfPresent(String.self, forKey: .boostType) ?? "Boost"
     let image    = try c.decodeIfPresent(String.self, forKey: .imageName)
 
-    // Canonical ID
     var canonID = image ?? Self.slug(rawName)
-    if rawName.lowercased() == "h4v0c" { canonID = "h4v0c" }  // special-case
+    if rawName.lowercased() == "h4v0c" { canonID = "h4v0c" }
 
-    // Department mapping from "role"
     var dept = Self.mapDepartment(fromRole: rawRole)
-
-    // Known corrections (your data had a few flipped)
     let corrections: [String:String] = [
       "Dr. Lilly": "elevator",
       "Chris Capella": "warehouse",
@@ -72,10 +67,14 @@ public struct SMDirectoryEntry: Decodable, Identifiable, Hashable {
     name       = rawName
     department = dept
     rarity     = "unknown"
-    // Convert % → multiplier (e.g., 250 → 2.50x)
     let mult   = boost > 0 ? Double(boost)/100.0 : nil
-    active     = Active(name: boostLbl, type: Self.slug(boostLbl), durationSeconds: Self.defaultDuration(for: rawName),
-                        cooldownSeconds: 900, multiplier: mult)
+    active     = Active(
+      name: boostLbl,
+      type: Self.slug(boostLbl),
+      durationSeconds: Self.defaultDuration(for: rawName),
+      cooldownSeconds: 900,
+      multiplier: mult
+    )
     passives   = nil
     var alias  = [rawName.replacingOccurrences(of: ".", with: "")]
     if rawName == "H4V0C" { alias.append(contentsOf: ["HAVOC","H4VOC"]) }
@@ -83,7 +82,6 @@ public struct SMDirectoryEntry: Decodable, Identifiable, Hashable {
     notes      = nil
   }
 
-  // MARK: - Helpers
   static func slug(_ s: String) -> String {
     s.lowercased()
       .replacingOccurrences(of: ".", with: "")
@@ -105,7 +103,7 @@ public struct SMDirectoryEntry: Decodable, Identifiable, Hashable {
     switch name {
     case "Mr. Edmund": return 120
     case "H4V0C": return 180
-    default: return 300 // 5m default
+    default: return 300
     }
   }
 }

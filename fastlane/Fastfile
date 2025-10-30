@@ -1,0 +1,40 @@
+# Fastfile for MineOpsCompanion
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Build the app for testing"
+  lane :build do
+    build_app(
+      workspace: "MineOpsCompanion.xcworkspace",
+      scheme: "MineOpsCompanion",
+      configuration: "Debug",
+      skip_package_ipa: true,
+      skip_archive: true,
+      destination: "generic/platform=iOS Simulator",
+      xcargs: "CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO"
+    )
+  end
+
+  desc "Run tests"
+  lane :test do
+    run_tests(
+      workspace: "MineOpsCompanion.xcworkspace",
+      scheme: "MineOpsCompanion",
+      testplan: "MineOpsCompanion.xctestplan",
+      devices: ["iPhone 16"],
+      code_coverage: true,
+      output_directory: "./fastlane/test_output"
+    )
+  end
+  
+  desc "Format Swift code"
+  lane :format do
+    sh("../scripts/format.sh")
+  end
+  
+  desc "Check Swift code formatting"
+  lane :format_check do
+    sh("../scripts/format.sh --check")
+  end
+end

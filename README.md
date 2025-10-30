@@ -1,6 +1,14 @@
 # MineOpsCompanion - iOS App
 
-A modern iOS application using a **workspace + SPM package** architecture for clean separation between app shell and feature code.
+A modern iOS application for managing Super Managers in Idle Miner Tycoon. Uses OCR to extract manager data from screenshots and provides strategic insights for deployment optimization.
+
+## Features
+
+- **OCR Import**: Extract 13+ data points from screenshots (name, department, rarity, stars, active/passive abilities, action buttons)
+- **Manager Database**: Full CRUD operations with swipe-to-delete and edit sheets
+- **Command Center Dashboard**: Department coverage and readiness metrics
+- **Strategy View**: Deployment recommendations (in development)
+- **Debug Visibility**: All extracted OCR fields shown for validation
 
 ## AI Assistant Rules Files
 
@@ -113,8 +121,59 @@ App capabilities are managed through a **declarative entitlements file**:
 
 ### SPM Package Resources
 To include assets in your feature package:
-```swift
-.target(
+## CI / Formatting / Fastlane
+
+### Continuous Integration
+GitHub Actions workflow (`.github/workflows/ios-ci.yml`) runs on every push/PR:
+- Builds on macOS 14 with Xcode 16
+- Runs full test suite on iPhone 16 simulator
+- Uploads test results as artifacts
+
+### Code Formatting
+Swift code is formatted using `swift-format`:
+```bash
+# Install swift-format
+brew install swift-format
+
+# Format all code
+./scripts/format.sh
+
+# Check formatting (CI mode)
+./scripts/format.sh --check
+```
+
+Configuration: `.swift-format` (2-space indent, 120 line length)
+
+### Fastlane
+Automation lanes for build/test/format:
+```bash
+# Install dependencies
+bundle install
+
+# Build for simulator
+bundle exec fastlane build
+
+# Run tests with coverage
+bundle exec fastlane test
+
+# Format code
+bundle exec fastlane format
+
+# Check formatting
+bundle exec fastlane format_check
+```
+
+## Development Workflow
+
+1. Open `MineOpsCompanion.xcworkspace` in Xcode
+2. Make changes in `MineOpsCompanionPackage/Sources/`
+3. Write tests in `MineOpsCompanionPackage/Tests/`
+4. Run tests (Cmd+U)
+5. Format code: `./scripts/format.sh`
+6. Commit and push (CI will validate)
+
+### Generated with XcodeBuildMCP
+This project was scaffolded using [XcodeBuildMCP](https://github.com/cameroncooke/XcodeBuildMCP), which provides tools for AI-assisted iOS development workflows.
     name: "MineOpsCompanionFeature",
     dependencies: [],
     resources: [.process("Resources")]
