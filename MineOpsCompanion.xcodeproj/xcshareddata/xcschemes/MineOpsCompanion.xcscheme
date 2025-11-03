@@ -70,6 +70,13 @@
             ReferencedContainer = "container:MineOpsCompanion.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "OPENAI_API_KEY"
+            value = "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"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"

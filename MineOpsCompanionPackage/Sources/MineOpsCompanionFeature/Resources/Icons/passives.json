@@ -1,0 +1,79 @@
+[
+  {
+    "type": "warehouse_speed",
+    "title": "Warehouse Speed",
+    "short": "Speed up unloading at the ramp.",
+    "long": "Increases worker movement/unload speed in the warehouse, clearing ramp backups faster and improving cash conversion during bursts.",
+    "template": "warehouse_speed.png"
+  },
+  {
+    "type": "warehouse_capacity",
+    "title": "Warehouse Capacity",
+    "short": "Store more crates at the ramp.",
+    "long": "Raises the number/size of crates the warehouse can buffer, preventing overflow while mines and elevator are streaming.",
+    "template": "warehouse_capacity.png"
+  },
+  {
+    "type": "warehouse_loading_efficiency",
+    "title": "Loading Efficiency",
+    "short": "Faster loading/unloading cycles.",
+    "long": "Cuts animation/handling time for each load cycle, smoothing throughput when paired with speed boosts.",
+    "template": "warehouse_loading_efficiency.png"
+  },
+  {
+    "type": "elevator_speed",
+    "title": "Elevator Speed",
+    "short": "Moves ore up faster.",
+    "long": "Increases vertical transport speed, the usual first choke. Pair with Lilly's beam for maximum effect.",
+    "template": "elevator_speed.png"
+  },
+  {
+    "type": "elevator_cost_reduction",
+    "title": "Elevator Cost Reduction",
+    "short": "Cheaper E upgrades.",
+    "long": "Reduces elevator level costs. Equip while buying several E levels to stretch cash (e.g., Damian Jones).",
+    "template": "elevator_cost_reduction.png"
+  },
+  {
+    "type": "mineshaft_speed",
+    "title": "Mineshaft Speed",
+    "short": "Faster miners in shafts.",
+    "long": "Increases mining/return speed. Use when feeding the elevator ahead of a burst.",
+    "template": "mineshaft_speed.png"
+  },
+  {
+    "type": "ore_extraction",
+    "title": "Ore Extraction Rate",
+    "short": "More ore per trip.",
+    "long": "Boosts the amount extracted per haul. Synergizes with beams/finishers for bigger bursts.",
+    "template": "ore_extraction.png"
+  },
+  {
+    "type": "drill_power",
+    "title": "Drill Power",
+    "short": "Breaks rocks faster.",
+    "long": "Speeds through rock tiles to deepen the mine more quickly during pushes.",
+    "template": "drill_power.png"
+  },
+  {
+    "type": "transport_multiplier",
+    "title": "Transport Multiplier",
+    "short": "Bigger cart deliveries.",
+    "long": "Multiplies the value/size of delivered loads at intervals. Great while streaming with Thalia/Lilly.",
+    "template": "transport_multiplier.png"
+  },
+  {
+    "type": "global_cost_reduction",
+    "title": "Global Cost Reduction",
+    "short": "Cheaper upgrades overall.",
+    "long": "Reduces costs across departments (where applicable). Use only while spending heavily.",
+    "template": "global_cost_reduction.png"
+  },
+  {
+    "type": "global_income",
+    "title": "Global Income",
+    "short": "More earnings overall.",
+    "long": "Flat multiplier to overall income—steady value during idle stretches.",
+    "template": "global_income.png"
+  }
+]

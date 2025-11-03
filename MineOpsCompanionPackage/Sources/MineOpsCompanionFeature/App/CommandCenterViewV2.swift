@@ -43,7 +43,7 @@ struct CommandCenterViewV2: View {
                 OCRReviewView()
             }
             .navigationDestination(isPresented: $navigateToStrategy) {
-                StrategySummaryView()
+                StrategyPipelineView()
             }
         }
     }

@@ -12,7 +12,7 @@ This checklist must be followed by Yancy Shepherd (maintainer) or any authorized
 - [ ] Ensure all modules compile successfully in **Xcode 17+**.  
 - [ ] Run unit tests in `/Tests` folder.  
 - [ ] Confirm zero build warnings or SwiftLint violations.  
-- [ ] Verify app navigation: *Dashboard → Import → Review → Summary → Export.*
+- [ ] Verify app navigation: *Dashboard → Import → Review → Strategy.*
 
 ### 🧩 Feature Completion
 - [ ] Confirm all milestone tasks for the current **Phase** in [`ROADMAP.md`](./ROADMAP.md) are complete.  
@@ -47,7 +47,7 @@ This checklist must be followed by Yancy Shepherd (maintainer) or any authorized
 ## 3. Release Validation
 - [ ] Checkout tag locally → build and run in simulator.  
 - [ ] Confirm `sm_directory.json` loads correctly.  
-- [ ] Verify export and share sheet produce valid file.  
+- [ ] Verify strategy summaries render expected recommendations.  
 - [ ] Check OCR accuracy with sample screenshots.
 
 ---

@@ -11,8 +11,8 @@ This ensures consistent alignment with [`PRD-MineOps-Companion.md`](./PRD-MineOp
 ### 1.1 When the Agent Starts
 
 1. Load both `PRD-MineOps-Companion.md` and `ROADMAP.md` into working memory.  
-2. Read repository structure to confirm presence of `/App`, `/OCR`, `/Strategy`, `/Export`, `/Models`, `/Data`, `/Resources`, `/Tests`.  
-3. Summarize active milestone from `ROADMAP.md` (default: *Phase 1 – Core Foundation*).  
+2. Inspect the workspace layout: `MineOpsCompanion/` (app shell) and `MineOpsCompanionPackage/Sources/MineOpsCompanionFeature/` (feature modules such as `App/`, `OCR/`, `DB/`, `Parsing/`, `Resources/`).  
+3. Summarize active milestone from `ROADMAP.md` (default: *Phase 1 – OCR + SwiftData Foundation*).  
 4. Identify open PRs or branches under development.  
 5. Acknowledge Yancy Shepherd as product owner for all final approvals.
 
@@ -54,8 +54,8 @@ Confirm which modules need work for the active milestone.
 
 ### 3.2 Feature Creation
 ```
-According to the PRD (Section 6, Task 2), implement the corrected parseText(_:) logic in OCRProcessor.swift.
-Create branch feature/ocr-parser-fix, commit with message "fix: correct level parsing logic per PRD §6.2".
+According to the PRD (Section 6, Task 2), wire the shared `ModelContainer` from `MineOpsCompanionApp` into `MineOpsRootView`.
+Create branch feature/swiftdata-container, commit with message "feat: inject SwiftData container per PRD §6".
 Open a pull request targeting main.
 ```
 
@@ -95,7 +95,7 @@ When “Next Phase Gate” criteria are met, propose phase promotion via PR titl
 - Use **complete file rewrites** rather than partial fragments for Swift code.  
 - Include **file headers** with module name, author, and purpose.  
 - Prefer **SwiftUI 2.0+ conventions** (NavigationStack, PhotosPicker, etc.).  
-- Keep **imports minimal** (`SwiftUI`, `VisionKit`, `UIKit` when needed).  
+- Keep **imports minimal** (`SwiftUI`, `Vision`, `UIKit` when needed).  
 - Comment functions clearly for human dev reference.
 
 ---
@@ -103,8 +103,9 @@ When “Next Phase Gate” criteria are met, propose phase promotion via PR titl
 ## 7. Testing Expectations
 Each commit that affects logic should trigger or update a matching test in `/Tests`.  
 Example:
-- `OCRProcessor.swift` → `OCRTests.swift`  
-- `StrategyEngine.swift` → `StrategyEngineTests.swift`
+- `OCRProcessor.swift` → `OCRFieldExtractionTests.swift`  
+- `SMStatsParser.swift` → `SMStatsParserTests.swift` (planned)  
+- `Database/SwiftData` helpers → `DatabaseTests.swift` (planned)
 
 Tests may stub data but must compile.
 
@@ -120,7 +121,7 @@ Tests may stub data but must compile.
 
 ## 9. Quality Bar
 - 0 compiler errors in Xcode 17 simulator build.  
-- 100 % functional navigation path: Dashboard → Import → Review → Summary → Export.  
+- 100 % functional navigation path: Command Center → Intake → Review → Save → Browser.  
 - Code passes SwiftLint checks if enabled.  
 - Documentation up-to-date with merged features.
 

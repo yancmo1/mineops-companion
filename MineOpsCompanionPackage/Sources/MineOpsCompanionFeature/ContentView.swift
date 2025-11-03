@@ -17,9 +17,7 @@ public struct ContentView: View {
                     Label("Manager", systemImage: "person.text.rectangle")
                 }
 
-            NavigationStack {
-                StrategySummaryView()
-            }
+            StrategyPipelineView()
                 .tabItem {
                     Label("Strategy", systemImage: "chart.bar.xaxis")
                 }
