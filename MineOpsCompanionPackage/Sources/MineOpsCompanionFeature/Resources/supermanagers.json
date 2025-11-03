@@ -1,0 +1,127 @@
+{
+  "managers": [
+    {
+      "id": "mr_edmund",
+      "name": "Mr. Edmund",
+      "rarity": "Rare",
+      "type": "Warehouse",
+      "active": {
+        "description": "Warehouse workers transform elevator cargo into 5x cash",
+        "multiplier": 5.0,
+        "duration": "2m",
+        "cooldown": "25m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "warehouse_speed",
+          "multiplier": 1.8,
+          "description": "+Warehouse Loading Speed"
+        }
+      ]
+    },
+    {
+      "id": "dr_lilly",
+      "name": "Dr. Lilly",
+      "rarity": "Epic",
+      "type": "Elevator",
+      "active": {
+        "description": "Beam 3x elevator payload directly to the warehouse",
+        "multiplier": 3.0,
+        "duration": "5m",
+        "cooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "loading_speed",
+          "description": "+Loading Speed"
+        },
+        {
+          "unlockLevel": 30,
+          "type": "continent_income",
+          "multiplier": 1.3,
+          "description": "+Continent Income"
+        }
+      ]
+    },
+    {
+      "id": "mr_turner",
+      "name": "Mr. Turner",
+      "rarity": "Rare",
+      "type": "Mine Shaft",
+      "active": {
+        "description": "Store resources in a piggy bank then unload 10x at the end",
+        "multiplier": 10.0,
+        "duration": "30s",
+        "cooldown": "15m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "mining_walking_speed",
+          "description": "+Mining & Walking Speed"
+        }
+      ]
+    },
+    {
+      "id": "thalia",
+      "name": "Thalia",
+      "rarity": "Legendary",
+      "type": "Mine Shaft",
+      "active": {
+        "description": "Boost mine shaft income by running a 5m continuous stream",
+        "multiplier": 12.0,
+        "duration": "5m",
+        "cooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "mining_speed",
+          "multiplier": 3.0,
+          "description": "+Mining Speed"
+        }
+      ]
+    },
+    {
+      "id": "chester",
+      "name": "Chester",
+      "rarity": "Common",
+      "type": "Mine Shaft",
+      "active": {
+        "description": "Grant 5x mining speed for five minutes",
+        "multiplier": 5.0,
+        "duration": "5m",
+        "cooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "upgrade_cost_reduction",
+          "multiplier": 0.5,
+          "description": "-50% Upgrade Cost"
+        }
+      ]
+    },
+    {
+      "id": "damian_jones",
+      "name": "Damian Jones",
+      "rarity": "Rare",
+      "type": "Elevator",
+      "active": {
+        "description": "Sprint elevator loading to clear queues",
+        "multiplier": 6.0,
+        "duration": "1m30s",
+        "cooldown": "20m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "movement_speed",
+          "description": "+Movement Speed"
+        }
+      ]
+    }
+  ]
+}

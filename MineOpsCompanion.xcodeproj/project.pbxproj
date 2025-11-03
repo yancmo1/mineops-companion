@@ -27,6 +27,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2E79849E2EB50277004038A3 /* Exceptions for "MineOpsCompanion" folder in "MineOpsCompanion" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8B41F6442DEDD0D5001A66F9 /* MineOpsCompanion */;
+		};
 		8BD71C0A2DEE41E000CEDD92 /* Exceptions for "Config" folder in "MineOpsCompanion" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -42,6 +49,9 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8B41F6472DEDD0D5001A66F9 /* MineOpsCompanion */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2E79849E2EB50277004038A3 /* Exceptions for "MineOpsCompanion" folder in "MineOpsCompanion" target */,
+			);
 			path = MineOpsCompanion;
 			sourceTree = "<group>";
 		};
@@ -377,13 +387,17 @@
 				DEVELOPMENT_TEAM = 9PHS626XUN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_DISPLAY_NAME)";
+				INFOPLIST_FILE = MineOpsCompanion/Info.plist;
+				INFOPLIST_FILE_ADDITIONS = "MineOpsCompanion/InfoPlist-Additions.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = MineOpsCompanion;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save generated reports and images.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Import screenshots to analyze Super Managers.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeRight UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -404,13 +418,17 @@
 				DEVELOPMENT_TEAM = 9PHS626XUN;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_DISPLAY_NAME)";
+				INFOPLIST_FILE = MineOpsCompanion/Info.plist;
+				INFOPLIST_FILE_ADDITIONS = "MineOpsCompanion/InfoPlist-Additions.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = MineOpsCompanion;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save generated reports and images.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Import screenshots to analyze Super Managers.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeRight UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

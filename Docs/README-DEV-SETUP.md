@@ -7,7 +7,6 @@ Production iOS companion app for *Idle Miner Tycoon* that:
 - Matches entries to a local static SM Directory JSON
 - Provides full CRUD operations for your manager database
 - Generates strategy summaries with department coverage analysis
-- Exports results as CSV/JSON (planned)
 
 ---
 ## 2. Environment Setup
@@ -54,8 +53,6 @@ MineOpsCompanion/
 │   │   │   ├── StrategyEngine.swift           # Optimization logic
 │   │   │   ├── StrategySummaryView.swift      # Strategy UI
 │   │   │   └── CommandCenterViewV2.swift      # Dashboard
-│   │   ├── Export/                            # Export (planned)
-│   │   │   └── ExportManager.swift            # CSV/JSON export
 │   │   ├── Resources/                         # Static data
 │   │   │   └── sm_directory.json              # Manager database
 │   │   └── Support/
@@ -343,7 +340,6 @@ struct OCRReviewView: View {
 1. Implement OCR error-handling and batch progress UI.  
 2. Load real SM Directory (`sm_directory.json`) and match parsed names.  
 3. Build editable Review UI (tap to correct parsed fields).  
-4. Integrate export logic (`ExportManager.swift`) to share Markdown.  
 5. Add CoreData for persistent storage.  
 6. Polish interface (icons, dark mode).  
 7. Prepare README + MIT License.

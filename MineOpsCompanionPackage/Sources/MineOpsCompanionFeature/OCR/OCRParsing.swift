@@ -125,9 +125,12 @@ public enum OCRTextHeuristics {
     guard !lines.isEmpty else { return "Unknown" }
 
     let keywords = ["super manager", "promotion", "level", "snapshot", "overview", "%", "boost", "readiness"]
+    let singleCharBlacklist = ["x", "X"]
 
     if let candidate = lines.first(where: { line in
       let lower = line.lowercased()
+      if line.count < 2 { return false } // Filter single characters
+      if singleCharBlacklist.contains(line) { return false } // Filter X close button
       if keywords.contains(where: { lower.contains($0) }) { return false }
       if line.rangeOfCharacter(from: .decimalDigits) != nil { return false }
       return lower.rangeOfCharacter(from: .letters) != nil

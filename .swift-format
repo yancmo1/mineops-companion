@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lineLength": 120,
+  "lineLength": 100,
   "indentation": {
     "spaces": 2
   },
@@ -13,13 +13,6 @@
   "indentSwitchCaseLabels": false,
   "fileScopedDeclarationPrivacy": {
     "accessLevel": "private"
-  },
-  "spacesAroundRangeFormationOperators": false,
-  "noAssignmentInExpressions": {
-    "allowedFunctions": ["XCTAssertNoThrow"]
-  },
-  "blankLineBetweenMembers": {
-    "ignoreSingleLineProperties": true
   },
   "rules": {
     "AllPublicDeclarationsHaveDocumentation": false,

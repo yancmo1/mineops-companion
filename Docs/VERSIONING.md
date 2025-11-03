@@ -16,7 +16,7 @@ MAJOR.MINOR.PATCH
 | Segment | Increment When... | Example |
 |----------|------------------|----------|
 | **MAJOR** | Backward-incompatible changes (e.g., Swift module refactor, new app target). | `1.0.0` |
-| **MINOR** | Backward-compatible feature additions (new screen, new export type). | `0.4.0` |
+| **MINOR** | Backward-compatible feature additions (new screen, strategy module). | `0.4.0` |
 | **PATCH** | Backward-compatible bug fixes, performance, or minor UI corrections. | `0.3.1` |
 
 ---
@@ -122,7 +122,7 @@ For critical issues discovered post-release:
 |----------|--------|----------|
 | v0.3.0 | Phase 1 | Core scaffold + OCR + Strategy |
 | v0.3.1 | Phase 1 | Parsing + UIKit import fix |
-| v0.4.0 | Phase 2 | Persistence + Export |
+| v0.4.0 | Phase 2 | Persistence + Strategy Insights |
 | v0.5.0 | Phase 3 | UX & AI Advisor |
 | v1.0.0 | Stable | Public-ready internal release |
 

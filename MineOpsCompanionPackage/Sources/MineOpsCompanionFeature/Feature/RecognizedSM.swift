@@ -10,6 +10,7 @@ public struct RecognizedSM: Identifiable, Hashable {
   public let resolvedName: String
   public let stats: SMStats
   public let storedImageName: String?
+  public let imageHash: String?
   public let rarity: String?
   public let role: String?
   public let stars: Int?
@@ -39,11 +40,14 @@ public struct RecognizedSM: Identifiable, Hashable {
     public let effect: String?
     public let multiplier: Double?
     public let durationSeconds: Int?
+    /// Status of the 3 passive ability slots (top, middle, bottom). True = unlocked/colorized, false = locked/gray.
+    public let unlockedSlots: [Bool]
 
-    public init(effect: String? = nil, multiplier: Double? = nil, durationSeconds: Int? = nil) {
+    public init(effect: String? = nil, multiplier: Double? = nil, durationSeconds: Int? = nil, unlockedSlots: [Bool] = []) {
       self.effect = effect
       self.multiplier = multiplier
       self.durationSeconds = durationSeconds
+      self.unlockedSlots = unlockedSlots
     }
 
     var isEmpty: Bool {
@@ -74,6 +78,7 @@ public struct RecognizedSM: Identifiable, Hashable {
     resolvedName: String,
     stats: SMStats,
     storedImageName: String? = nil,
+    imageHash: String? = nil,
     rarity: String? = nil,
     role: String? = nil,
     stars: Int? = nil,
@@ -89,6 +94,7 @@ public struct RecognizedSM: Identifiable, Hashable {
     self.resolvedName = resolvedName
     self.stats = stats
     self.storedImageName = storedImageName
+    self.imageHash = imageHash
     self.rarity = rarity
     self.role = role
     self.stars = stars
@@ -194,6 +200,7 @@ public struct RecognizedSM: Identifiable, Hashable {
       resolvedName: resolvedName,
       stats: stats,
       storedImageName: name,
+      imageHash: imageHash,
       rarity: rarity,
       role: role,
       stars: stars,
@@ -221,6 +228,7 @@ public struct RecognizedSM: Identifiable, Hashable {
       resolvedName: resolvedName,
       stats: stats,
       storedImageName: storedImageName,
+      imageHash: imageHash,
       rarity: rarity.nilIfEmpty,
       role: role.nilIfEmpty,
       stars: stars,

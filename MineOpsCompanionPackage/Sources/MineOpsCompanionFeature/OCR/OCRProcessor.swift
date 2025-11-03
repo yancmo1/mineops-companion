@@ -4,11 +4,13 @@ import Vision
 import VisionKit
 
 @MainActor
-final class OCRProcessor: ObservableObject {
-    @Published private(set) var results: [RecognizedSM] = []
+public final class OCRProcessor: ObservableObject {
+    @Published private(set) public var results: [RecognizedSM] = []
     private let directory: [SMDirectoryEntry] = (try? SMDirectory.load()) ?? []
+    
+    public init() {}
 
-    func processImages(_ images: [UIImage]) async {
+    public func processImages(_ images: [UIImage]) async {
         for image in images {
             guard let cgImage = image.cgImage else { continue }
             let text = await Self.recognizeText(from: cgImage)

@@ -43,6 +43,7 @@ final class Persistence {
                 resolvedName: record.resolvedName,
                 stats: record.stats,
                 storedImageName: record.imageName,
+                imageHash: record.imageHash,
                 rarity: record.rarity,
                 role: record.role,
                 stars: record.stars,
@@ -80,6 +81,7 @@ final class Persistence {
                     directoryId: item.directoryMatch?.id,
                     stats: item.stats,
                     imageName: imageName,
+                    imageHash: item.imageHash,
                     rarity: item.rarity,
                     role: item.role,
                     stars: item.stars,
@@ -125,6 +127,7 @@ private struct StoredRecognizedSM: Codable {
     let directoryId: String?
     let stats: SMStats
     let imageName: String?
+    let imageHash: String?
     let rarity: String?
     let role: String?
     let stars: Int?

@@ -48,14 +48,14 @@ Each entry includes:
 
 ---
 
-## [v0.4.0] – *Persistence + Export* – Planned Q4 2025
-> **Phase 2 – Data Persistence + Export**
+## [v0.4.0] – *Persistence + Strategy Insights* – Planned Q4 2025
+> **Phase 2 – Strategy Insights Enablement**
 
 ### Planned
-- Core Data snapshot storage (`Persistence.swift` + `.xcdatamodeld`).  
+- SwiftData-backed snapshot storage for recognized managers and strategies.  
 - `SummaryHistoryView` listing prior strategy runs.  
-- Markdown export + Share Sheet integration (`ExportManager`).  
-- Corresponding unit tests for save/load/export.
+- Strategy ranking refinements and historical analytics.  
+- Corresponding unit tests for persistence and strategy scoring.
 
 ---
 

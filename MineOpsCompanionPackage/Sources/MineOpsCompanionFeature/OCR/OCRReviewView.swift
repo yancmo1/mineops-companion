@@ -12,30 +12,57 @@ struct OCRReviewView: View {
     @State private var isEditingManager = false
     @State private var editingRecord: RecognizedSM?
     @State private var editDraft = RecognizedSMEditDraft()
+    @State private var expandedCardIds = Set<UUID>()
+    @State private var showingScreenshotImporter = false
 
     var body: some View {
         VStack(spacing: 16) {
-            PhotosPicker(selection: $selectedPhotos, matching: .images, photoLibrary: .shared()) {
-                HStack {
-                    Image(systemName: "photo.on.rectangle")
-                    Text("Import Screenshots")
-                        .font(.headline)
+            HStack(spacing: 12) {
+                PhotosPicker(selection: $selectedPhotos, matching: .images, photoLibrary: .shared()) {
+                    HStack {
+                        Image(systemName: "photo.on.rectangle")
+                        Text("Pick Images")
+                            .font(.headline)
+                    }
+                    .foregroundStyle(Color.accentCyan)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.mineDarkLight)
+                    .clipShape(RoundedRectangle(cornerRadius: MineOpsLayout.cornerRadius))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: MineOpsLayout.cornerRadius)
+                            .stroke(Color.accentCyan.opacity(0.7), lineWidth: 1)
+                    )
                 }
-                .foregroundStyle(Color.accentCyan)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.mineDarkLight)
-                .clipShape(RoundedRectangle(cornerRadius: MineOpsLayout.cornerRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: MineOpsLayout.cornerRadius)
-                        .stroke(Color.accentCyan.opacity(0.7), lineWidth: 1)
-                )
+                .photosPickerAccessoryVisibility(.visible)
+                .onChange(of: selectedPhotos, initial: false) { _, _ in
+                    Task { @MainActor in await importSelected() }
+                }
+                .accessibilityIdentifier("selectScreenshotsButton")
+                
+                Button {
+                    showingScreenshotImporter = true
+                } label: {
+                    HStack {
+                        Image(systemName: "photo.stack")
+                        Text("Import New")
+                            .font(.headline)
+                    }
+                    .foregroundStyle(Color.accentCyan)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.mineDarkLight)
+                    .clipShape(RoundedRectangle(cornerRadius: MineOpsLayout.cornerRadius))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: MineOpsLayout.cornerRadius)
+                            .stroke(Color.accentCyan.opacity(0.7), lineWidth: 1)
+                    )
+                }
+                .sheet(isPresented: $showingScreenshotImporter) {
+                    ScreenshotImporterView()
+                }
+                .accessibilityIdentifier("importScreenshotsButton")
             }
-            .photosPickerAccessoryVisibility(.visible)
-            .onChange(of: selectedPhotos, initial: false) { _, _ in
-                Task { @MainActor in await importSelected() }
-            }
-            .accessibilityIdentifier("selectScreenshotsButton")
 
             if let progressMessage {
                 Text(progressMessage)
@@ -57,6 +84,8 @@ struct OCRReviewView: View {
 
             List {
                 ForEach(review.recognized) { result in
+                    let isExpanded = expandedCardIds.contains(result.id)
+                    
                     VStack(alignment: .leading, spacing: 6) {
                         Text(result.directoryMatch?.name ?? result.resolvedName)
                             .mineOpsCardTitle()
@@ -93,36 +122,58 @@ struct OCRReviewView: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        if result.actions.hasLevelUp || result.actions.hasPromote || result.actions.hasRankUp {
-                            Text(actionFlagsLine(for: result.actions))
-                                .mineOpsCaption()
-                                .foregroundStyle(Color.accentCyan)
-                        }
+                        if isExpanded {
+                            if result.actions.hasLevelUp || result.actions.hasPromote || result.actions.hasRankUp {
+                                Text(actionFlagsLine(for: result.actions))
+                                    .mineOpsCaption()
+                                    .foregroundStyle(Color.accentCyan)
+                            }
 
-                        if !debugPairs(for: result).isEmpty {
-                            Divider()
-                                .overlay(Color.mineDarkLight.opacity(0.5))
-                                .padding(.vertical, 2)
+                            if !debugPairs(for: result).isEmpty {
+                                Divider()
+                                    .overlay(Color.mineDarkLight.opacity(0.5))
+                                    .padding(.vertical, 2)
 
-                            ForEach(Array(debugPairs(for: result).enumerated()), id: \.offset) { _, field in
-                                HStack {
-                                    Text(field.label)
-                                        .mineOpsCaption()
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text(field.value)
-                                        .mineOpsCaption()
-                                        .foregroundStyle(.primary)
+                                ForEach(Array(debugPairs(for: result).enumerated()), id: \.offset) { _, field in
+                                    HStack {
+                                        Text(field.label)
+                                            .mineOpsCaption()
+                                            .foregroundStyle(.secondary)
+                                        Spacer()
+                                        Text(field.value)
+                                            .mineOpsCaption()
+                                            .foregroundStyle(.primary)
+                                    }
                                 }
                             }
                         }
+                        
+                        if !isExpanded {
+                            HStack {
+                                Spacer()
+                                Image(systemName: "chevron.down")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text("Tap to expand")
+                                    .mineOpsCaption()
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                            }
+                            .padding(.top, 4)
+                        }
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 8)
+                    .listRowBackground(Color.mineDarkCard)
+                    .listRowSeparator(.hidden)
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        editingRecord = result
-                        editDraft = RecognizedSMEditDraft(record: result)
-                        isEditingManager = true
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if expandedCardIds.contains(result.id) {
+                                expandedCardIds.remove(result.id)
+                            } else {
+                                expandedCardIds.insert(result.id)
+                            }
+                        }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button("Delete", role: .destructive) {
@@ -132,6 +183,7 @@ struct OCRReviewView: View {
                             editingRecord = result
                             editDraft = RecognizedSMEditDraft(record: result)
                             isEditingManager = true
+                            expandedCardIds.remove(result.id)
                         }
                         .tint(.accentCyan)
                     }
@@ -160,6 +212,29 @@ struct OCRReviewView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 HStack {
+                    Menu {
+                        NavigationLink {
+                            IconCalibrationView()
+                        } label: {
+                            Label("Calibrate Icons", systemImage: "viewfinder.circle")
+                        }
+                        
+                        NavigationLink {
+                            IconLabelerView()
+                        } label: {
+                            Label("Label Icons", systemImage: "tag.fill")
+                        }
+                        
+                        NavigationLink {
+                            SnapshotHistoryView()
+                        } label: {
+                            Label("History", systemImage: "clock.arrow.circlepath")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(Color.accentCyan)
+                    }
+                    
                     EditButton()
                         .tint(.accentCyan)
                     Image(systemName: "checkmark.seal")
@@ -216,11 +291,29 @@ struct OCRReviewView: View {
         progressMessage = "Importing \(selectedPhotos.count) screenshot(s)…"
 
         ocr.reset()
+        
+        var skippedDuplicates = 0
+        var processedImages: [(image: UIImage, result: RecognizedSM)] = []
 
         defer {
             isImporting = false
-            progressMessage = nil
+            
+            if skippedDuplicates > 0 {
+                progressMessage = "Skipped \(skippedDuplicates) duplicate(s)"
+            } else {
+                progressMessage = nil
+            }
+            
             review.replace(with: ocr.results)
+            
+            // Create snapshot after successful import
+            if !ocr.results.isEmpty {
+                let snapshot = ImportSnapshot.create(from: review.recognized)
+                Task {
+                    await SnapshotManager.shared.saveSnapshot(snapshot)
+                }
+            }
+            
             selectedPhotos = []
         }
 
@@ -229,9 +322,52 @@ struct OCRReviewView: View {
                 guard let data = try await item.loadTransferable(type: Data.self), let img = UIImage(data: data) else {
                     throw ImportError.decodeFailed
                 }
+                
+                // Check for duplicate using perceptual hash
+                if let hash = ImageHasher.perceptualHash(for: img) {
+                    if await ImageHashStore.shared.isDuplicate(hash) {
+                        print("⏭️ Skipping duplicate image (hash: \(hash.prefix(8))...)")
+                        skippedDuplicates += 1
+                        continue
+                    } else {
+                        print("✅ New image (hash: \(hash.prefix(8))...)")
+                    }
+                    await ImageHashStore.shared.addHash(hash)
+                }
+                
+                let resultsBefore = ocr.results.count
                 await ocr.processImages([img])
+                
+                // Track which images were successfully processed
+                if ocr.results.count > resultsBefore, let newResult = ocr.results.last {
+                    processedImages.append((img, newResult))
+                }
             } catch {
                 importError = "Failed to import one or more screenshots."
+            }
+        }
+        
+        // Harvest icons for training/labeling
+        if !processedImages.isEmpty {
+            progressMessage = "Harvesting passive icons..."
+            for (image, result) in processedImages {
+                let managerId = result.id.uuidString
+                let managerName = result.directoryMatch?.name ?? result.resolvedName
+                
+                print("🔍 Harvesting icons for \(managerName) (ID: \(managerId))")
+                let icons = IconHarvester.harvestIcons(from: image, managerId: managerId)
+                print("📦 Found \(icons.count) icons to harvest")
+                
+                if icons.isEmpty {
+                    print("⚠️ No icons harvested for \(managerName) - check calibration or passive detection")
+                } else {
+                    do {
+                        try IconHarvester.saveHarvest(icons, managerId: managerId, managerName: managerName, sourceImage: image)
+                        print("✅ Saved \(icons.count) icons for \(managerName)")
+                    } catch {
+                        print("❌ Failed to save harvest for \(managerName): \(error)")
+                    }
+                }
             }
         }
     }
@@ -347,8 +483,13 @@ private extension OCRReviewView {
         }
         entries = entries.flatMap { $0.split(separator: "•").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) } }
         entries = entries.filter { !$0.isEmpty }
+        
+        // Add unlock status indicators
+        let unlockIndicators = result.passive.unlockedSlots.map { $0 ? "✓" : "🔒" }.joined(separator: " ")
+        let prefix = unlockIndicators.isEmpty ? "Passive:" : "Passive [\(unlockIndicators)]:"
+        
         guard !entries.isEmpty else { return nil }
-        return "Passive: " + entries.joined(separator: " • ")
+        return prefix + " " + entries.joined(separator: " • ")
     }
 
     func actionFlagsLine(for actions: RecognizedSM.ActionFlags) -> String {

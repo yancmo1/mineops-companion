@@ -26,6 +26,12 @@ public final class OCRReviewViewModel: ObservableObject {
             let displayName = match?.name ?? OCRTextHeuristics.guessDisplayName(from: text)
             let fields = OCRFieldExtraction.extract(from: text)
 
+            let imageHash = ImageHasher.perceptualHash(for: image)
+            
+            // Detect passive ability unlock status using color analysis
+            let passiveStatuses = AbilityDetector.detectPassives(in: image)
+            let unlockedSlots = passiveStatuses.map { $0.isUnlocked }
+            
             return RecognizedSM(
                 sourceImage: image,
                 rawText: text,
@@ -33,6 +39,7 @@ public final class OCRReviewViewModel: ObservableObject {
                 directoryMatch: match,
                 resolvedName: displayName,
                 stats: stats,
+                imageHash: imageHash,
                 rarity: fields.rarity,
                 role: fields.role,
                 stars: fields.stars,
@@ -45,7 +52,8 @@ public final class OCRReviewViewModel: ObservableObject {
                 passive: RecognizedSM.PassiveInfo(
                     effect: fields.passiveEffect,
                     multiplier: fields.passiveMultiplier,
-                    durationSeconds: fields.passiveDurationSeconds
+                    durationSeconds: fields.passiveDurationSeconds,
+                    unlockedSlots: unlockedSlots
                 ),
                 actions: RecognizedSM.ActionFlags(
                     hasLevelUp: fields.hasLevelUp,
@@ -62,10 +70,28 @@ public final class OCRReviewViewModel: ObservableObject {
     public func replace(with recognized: [RecognizedSM]) {
         applyMerged(with: recognized)
     }
+    
+    /// Replace the current roster and return info about what was updated vs new.
+    public func replaceAndTrackChanges(with incoming: [RecognizedSM]) -> (newImports: [RecognizedSM], updates: [RecognizedSM]) {
+        let existingKeys = Set(recognized.map { $0.identityKey })
+        let newImports = incoming.filter { !existingKeys.contains($0.identityKey) }
+        let updates = incoming.filter { existingKeys.contains($0.identityKey) }
+        
+        applyMerged(with: incoming)
+        
+        return (newImports, updates)
+    }
 
     public func delete(_ record: RecognizedSM) {
         recognized.removeAll { $0.id == record.id }
         recognized = persistence.saveRecognized(recognized)
+        
+        // Remove hash from store
+        if let hash = record.imageHash {
+            Task {
+                await ImageHashStore.shared.removeHash(hash)
+            }
+        }
     }
 
     public func update(_ record: RecognizedSM, with updated: RecognizedSM) {
