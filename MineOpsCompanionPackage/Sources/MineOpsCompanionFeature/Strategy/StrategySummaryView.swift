@@ -23,6 +23,29 @@ struct StrategySummaryView: View {
                         .accessibilityIdentifier("strategySummaryText")
                 }
 
+                if !viewModel.burstSteps.isEmpty {
+                    CardContainer(title: "Burst Macro") {
+                        VStack(alignment: .leading, spacing: MineOpsLayout.itemSpacing) {
+                            ForEach(viewModel.burstSteps) { step in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("#\(step.order) \(step.title)")
+                                        .font(.headline)
+                                        .foregroundStyle(.primary)
+                                    Text("\(step.managerName) • \(step.role)")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary)
+                                    Text("T+\(step.startOffsetSeconds)s for \(step.durationSeconds)s")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.vertical, 4)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .accessibilityIdentifier("burstMacroSteps")
+                    }
+                }
+
                 MineOpsButton(label: "Generate Strategy", icon: "wand.and.stars") {
                     viewModel.generate(from: review.recognized)
                 }
