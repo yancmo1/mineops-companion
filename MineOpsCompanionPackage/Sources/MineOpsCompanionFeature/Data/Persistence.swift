@@ -18,7 +18,7 @@ final class Persistence {
         try? fm.createDirectory(at: container, withIntermediateDirectories: true)
         try? fm.createDirectory(at: images, withIntermediateDirectories: true)
 
-        storageURL = container.appendingPathComponent("recognized.json")
+        storageURL = container.appendingPathComponent("recognized_managers.json")
         imagesDirectoryURL = images
         directory = (try? SMDirectory.load()) ?? []
     }
@@ -30,10 +30,11 @@ final class Persistence {
 
         return records.compactMap { record in
             let image = loadImage(named: record.imageName) ?? UIImage()
-            let match = directory.first(where: { entry in
+            let match = directory.first { entry in
                 if let id = record.directoryId, entry.id == id { return true }
                 return entry.name.caseInsensitiveCompare(record.resolvedName) == .orderedSame
-            })
+            }
+            let fingerprint = record.imageFingerprint ?? record.legacyImageHash.map { ImageFingerprint.legacy($0) }
             return RecognizedSM(
                 id: record.id,
                 sourceImage: image,
@@ -43,7 +44,7 @@ final class Persistence {
                 resolvedName: record.resolvedName,
                 stats: record.stats,
                 storedImageName: record.imageName,
-                imageHash: record.imageHash,
+                imageFingerprint: fingerprint,
                 rarity: record.rarity,
                 role: record.role,
                 stars: record.stars,
@@ -81,7 +82,7 @@ final class Persistence {
                     directoryId: item.directoryMatch?.id,
                     stats: item.stats,
                     imageName: imageName,
-                    imageHash: item.imageHash,
+                    imageFingerprint: item.imageFingerprint,
                     rarity: item.rarity,
                     role: item.role,
                     stars: item.stars,
@@ -127,13 +128,102 @@ private struct StoredRecognizedSM: Codable {
     let directoryId: String?
     let stats: SMStats
     let imageName: String?
-    let imageHash: String?
+    let imageFingerprint: ImageFingerprint?
+    let legacyImageHash: String?
     let rarity: String?
     let role: String?
     let stars: Int?
     let active: StoredActiveInfo?
     let passive: StoredPassiveInfo?
     let actions: StoredActions?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case rawText
+        case level
+        case resolvedName
+        case directoryId
+        case stats
+        case imageName
+        case imageFingerprint
+        case legacyImageHash = "imageHash"
+        case rarity
+        case role
+        case stars
+        case active
+        case passive
+        case actions
+    }
+
+    init(
+        id: UUID,
+        rawText: String,
+        level: Int?,
+        resolvedName: String,
+        directoryId: String?,
+        stats: SMStats,
+        imageName: String?,
+        imageFingerprint: ImageFingerprint?,
+        rarity: String?,
+        role: String?,
+        stars: Int?,
+        active: StoredActiveInfo?,
+        passive: StoredPassiveInfo?,
+        actions: StoredActions?
+    ) {
+        self.id = id
+        self.rawText = rawText
+        self.level = level
+        self.resolvedName = resolvedName
+        self.directoryId = directoryId
+        self.stats = stats
+        self.imageName = imageName
+        self.imageFingerprint = imageFingerprint
+        self.legacyImageHash = nil
+        self.rarity = rarity
+        self.role = role
+        self.stars = stars
+        self.active = active
+        self.passive = passive
+        self.actions = actions
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        rawText = try container.decode(String.self, forKey: .rawText)
+        level = try container.decodeIfPresent(Int.self, forKey: .level)
+        resolvedName = try container.decode(String.self, forKey: .resolvedName)
+        directoryId = try container.decodeIfPresent(String.self, forKey: .directoryId)
+        stats = try container.decode(SMStats.self, forKey: .stats)
+        imageName = try container.decodeIfPresent(String.self, forKey: .imageName)
+        imageFingerprint = try container.decodeIfPresent(ImageFingerprint.self, forKey: .imageFingerprint)
+        legacyImageHash = try container.decodeIfPresent(String.self, forKey: .legacyImageHash)
+        rarity = try container.decodeIfPresent(String.self, forKey: .rarity)
+        role = try container.decodeIfPresent(String.self, forKey: .role)
+        stars = try container.decodeIfPresent(Int.self, forKey: .stars)
+        active = try container.decodeIfPresent(StoredActiveInfo.self, forKey: .active)
+        passive = try container.decodeIfPresent(StoredPassiveInfo.self, forKey: .passive)
+        actions = try container.decodeIfPresent(StoredActions.self, forKey: .actions)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(rawText, forKey: .rawText)
+        try container.encodeIfPresent(level, forKey: .level)
+        try container.encode(resolvedName, forKey: .resolvedName)
+        try container.encodeIfPresent(directoryId, forKey: .directoryId)
+        try container.encode(stats, forKey: .stats)
+        try container.encodeIfPresent(imageName, forKey: .imageName)
+        try container.encodeIfPresent(imageFingerprint, forKey: .imageFingerprint)
+        try container.encodeIfPresent(rarity, forKey: .rarity)
+        try container.encodeIfPresent(role, forKey: .role)
+        try container.encodeIfPresent(stars, forKey: .stars)
+        try container.encodeIfPresent(active, forKey: .active)
+        try container.encodeIfPresent(passive, forKey: .passive)
+        try container.encodeIfPresent(actions, forKey: .actions)
+    }
 
     struct StoredActiveInfo: Codable {
         let effect: String?

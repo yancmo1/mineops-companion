@@ -4,7 +4,7 @@ import UIKit
 
 struct OCRReviewView: View {
     @EnvironmentObject private var review: OCRReviewViewModel
-    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var showingScreenshotsBrowser = false
     @State private var isImporting = false
     @State private var importError: String?
     @State private var progressMessage: String?
@@ -18,10 +18,12 @@ struct OCRReviewView: View {
     var body: some View {
         VStack(spacing: 16) {
             HStack(spacing: 12) {
-                PhotosPicker(selection: $selectedPhotos, matching: .images, photoLibrary: .shared()) {
+                Button {
+                    showingScreenshotsBrowser = true
+                } label: {
                     HStack {
                         Image(systemName: "photo.on.rectangle")
-                        Text("Pick Images")
+                        Text("Screenshots")
                             .font(.headline)
                     }
                     .foregroundStyle(Color.accentCyan)
@@ -34,11 +36,12 @@ struct OCRReviewView: View {
                             .stroke(Color.accentCyan.opacity(0.7), lineWidth: 1)
                     )
                 }
-                .photosPickerAccessoryVisibility(.visible)
-                .onChange(of: selectedPhotos, initial: false) { _, _ in
-                    Task { @MainActor in await importSelected() }
-                }
                 .accessibilityIdentifier("selectScreenshotsButton")
+                .fullScreenCover(isPresented: $showingScreenshotsBrowser) {
+                    ScreenshotsBrowserView { images in
+                        Task { @MainActor in await importSelectedImages(images) }
+                    }
+                }
                 
                 Button {
                     showingScreenshotImporter = true
@@ -93,33 +96,33 @@ struct OCRReviewView: View {
                         if let rarityLine = rarityLine(for: result) {
                             Text(rarityLine)
                                 .mineOpsBody()
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.7))
                         }
 
                         Text("Assignment: \(assignmentLine(for: result))")
                             .mineOpsBody()
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.7))
 
                         Text("Promotion: \(promotionText(for: result))")
                             .mineOpsBody()
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.7))
 
                         if let levelLine = levelLine(for: result) {
                             Text(levelLine)
                                 .mineOpsBody()
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.7))
                         }
 
                         if let activeLine = activeLine(for: result) {
                             Text(activeLine)
                                 .mineOpsBody()
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.7))
                         }
 
                         if let passiveLine = passiveLine(for: result) {
                             Text(passiveLine)
                                 .mineOpsBody()
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.7))
                         }
 
                         if isExpanded {
@@ -138,11 +141,11 @@ struct OCRReviewView: View {
                                     HStack {
                                         Text(field.label)
                                             .mineOpsCaption()
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(.white.opacity(0.5))
                                         Spacer()
                                         Text(field.value)
                                             .mineOpsCaption()
-                                            .foregroundStyle(.primary)
+                                            .foregroundStyle(.white.opacity(0.9))
                                     }
                                 }
                             }
@@ -153,10 +156,10 @@ struct OCRReviewView: View {
                                 Spacer()
                                 Image(systemName: "chevron.down")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.4))
                                 Text("Tap to expand")
                                     .mineOpsCaption()
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.4))
                                 Spacer()
                             }
                             .padding(.top, 4)
@@ -219,6 +222,12 @@ struct OCRReviewView: View {
                             Label("Calibrate Icons", systemImage: "viewfinder.circle")
                         }
                         
+                        NavigationLink {
+                            IconLegendView()
+                        } label: {
+                            Label("Icon Legend", systemImage: "square.grid.2x2")
+                        }
+
                         NavigationLink {
                             IconLabelerView()
                         } label: {
@@ -284,11 +293,11 @@ struct OCRReviewView: View {
     }
 
     @MainActor
-    private func importSelected() async {
-        guard !selectedPhotos.isEmpty else { return }
+    private func importSelectedImages(_ images: [UIImage]) async {
+        guard !images.isEmpty else { return }
         isImporting = true
         importError = nil
-        progressMessage = "Importing \(selectedPhotos.count) screenshot(s)…"
+        progressMessage = "Importing \(images.count) screenshot(s)…"
 
         ocr.reset()
         
@@ -298,8 +307,16 @@ struct OCRReviewView: View {
         defer {
             isImporting = false
             
+            var skipMessages: [String] = []
             if skippedDuplicates > 0 {
-                progressMessage = "Skipped \(skippedDuplicates) duplicate(s)"
+                skipMessages.append("\(skippedDuplicates) duplicate\(skippedDuplicates == 1 ? "" : "s")")
+            }
+            if ocr.skippedCount > 0 {
+                skipMessages.append("\(ocr.skippedCount) non-game")
+            }
+            
+            if !skipMessages.isEmpty {
+                progressMessage = "Skipped: \(skipMessages.joined(separator: ", "))"
             } else {
                 progressMessage = nil
             }
@@ -313,37 +330,29 @@ struct OCRReviewView: View {
                     await SnapshotManager.shared.saveSnapshot(snapshot)
                 }
             }
-            
-            selectedPhotos = []
         }
 
-        for item in selectedPhotos {
-            do {
-                guard let data = try await item.loadTransferable(type: Data.self), let img = UIImage(data: data) else {
-                    throw ImportError.decodeFailed
+        for img in images {
+            let fingerprint = ImageHasher.fingerprint(for: img)
+            if let fingerprint {
+                if ImageHashStore.shared.isDuplicate(fingerprint) {
+                    print("⏭️ Skipping duplicate image (hash: \(fingerprint.perceptualHash.prefix(8))...)")
+                    skippedDuplicates += 1
+                    continue
+                } else {
+                    print("✅ New image (hash: \(fingerprint.perceptualHash.prefix(8))...)")
                 }
-                
-                // Check for duplicate using perceptual hash
-                if let hash = ImageHasher.perceptualHash(for: img) {
-                    if await ImageHashStore.shared.isDuplicate(hash) {
-                        print("⏭️ Skipping duplicate image (hash: \(hash.prefix(8))...)")
-                        skippedDuplicates += 1
-                        continue
-                    } else {
-                        print("✅ New image (hash: \(hash.prefix(8))...)")
-                    }
-                    await ImageHashStore.shared.addHash(hash)
-                }
-                
-                let resultsBefore = ocr.results.count
-                await ocr.processImages([img])
-                
-                // Track which images were successfully processed
-                if ocr.results.count > resultsBefore, let newResult = ocr.results.last {
-                    processedImages.append((img, newResult))
-                }
-            } catch {
-                importError = "Failed to import one or more screenshots."
+                ImageHashStore.shared.add(fingerprint)
+            } else {
+                print("⚠️ Could not fingerprint image; importing anyway")
+            }
+            
+            let resultsBefore = ocr.results.count
+            await ocr.processImages([img])
+            
+            // Track which images were successfully processed
+            if ocr.results.count > resultsBefore, let newResult = ocr.results.last {
+                processedImages.append((img, newResult))
             }
         }
         
@@ -371,10 +380,6 @@ struct OCRReviewView: View {
             }
         }
     }
-}
-
-private enum ImportError: Error {
-    case decodeFailed
 }
 
 private extension OCRReviewView {

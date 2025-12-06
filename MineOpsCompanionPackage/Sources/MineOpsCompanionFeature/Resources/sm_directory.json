@@ -1,118 +1,352 @@
 [
   {
-    "name": "Mr. Edmund",
-    "role": "Warehouse",
-    "boostType": "Warehouse Speed",
-    "baseBoost": 250,
-    "maxBoost": 750,
-    "availability": "Mainland",
-    "cost": 1200000,
-    "synergy": ["Lee Vatori", "Mrs. Goodman"],
-    "imageName": "mr_edmund"
+    "id": "blingsley",
+    "name": "Blingsley",
+    "department": "mineshaft",
+    "rarity": "legendary",
+    "aliases": ["Blingsley", "Bling"],
+    "active": {
+      "name": "Cash Rush",
+      "type": "cash_multiplier",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 12.0
+    }
   },
   {
-    "name": "Freesia",
-    "role": "Transport",
-    "boostType": "Transport Speed",
-    "baseBoost": 180,
-    "maxBoost": 600,
-    "availability": "Mainland",
-    "cost": 950000,
-    "synergy": ["H4V0C"],
-    "imageName": "freesia"
+    "id": "chester",
+    "name": "Chester",
+    "department": "mineshaft",
+    "rarity": "common",
+    "aliases": ["Chester"],
+    "active": {
+      "name": "Mining Speed",
+      "type": "mining_speed",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 5.0
+    }
   },
   {
+    "id": "mr_turner",
+    "name": "Mr. Turner",
+    "department": "mineshaft",
+    "rarity": "rare",
+    "aliases": ["Mr Turner", "Turner", "MrTurner"],
+    "active": {
+      "name": "Piggy Bank",
+      "type": "piggy_bank",
+      "durationSeconds": 30,
+      "cooldownSeconds": 900,
+      "multiplier": 10.0
+    }
+  },
+  {
+    "id": "thalia",
+    "name": "Thalia",
+    "department": "mineshaft",
+    "rarity": "legendary",
+    "aliases": ["Thalia"],
+    "active": {
+      "name": "Beam to Elevator",
+      "type": "beam_elevator",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 12.0
+    }
+  },
+  {
+    "id": "h4v0c",
     "name": "H4V0C",
-    "role": "Mine",
-    "boostType": "Mining Speed",
-    "baseBoost": 220,
-    "maxBoost": 700,
-    "availability": "Mainland",
-    "cost": 1050000,
-    "synergy": ["Freesia"],
-    "imageName": "havoc"
+    "department": "mineshaft",
+    "rarity": "epic",
+    "aliases": ["HAVOC", "H4VOC", "Havoc", "havoc"],
+    "active": {
+      "name": "Multiplier Burst",
+      "type": "multiplier",
+      "durationSeconds": 180,
+      "cooldownSeconds": 1200,
+      "multiplier": 7.0
+    }
   },
   {
-    "name": "Mrs. Goodman",
-    "role": "Warehouse",
-    "boostType": "Loading Efficiency",
-    "baseBoost": 140,
-    "maxBoost": 480,
-    "availability": "Continent 3",
-    "cost": 875000,
-    "synergy": ["Goodman Jr."],
-    "imageName": "mrs_goodman"
+    "id": "dr_steiner",
+    "name": "Dr. Steiner",
+    "department": "mineshaft",
+    "rarity": "epic",
+    "aliases": ["Dr Steiner", "Steiner", "DrSteiner"],
+    "active": {
+      "name": "Mining Efficiency",
+      "type": "mining_efficiency",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 6.0
+    }
   },
   {
-    "name": "Goodman Jr.",
-    "role": "Transport",
-    "boostType": "Transport Multiplier",
-    "baseBoost": 100,
-    "maxBoost": 400,
-    "availability": "Continent 3",
-    "cost": 700000,
-    "synergy": ["Mrs. Goodman"],
-    "imageName": "goodman_jr"
-  },
-  {
-    "name": "Lee Vatori",
-    "role": "Mine",
-    "boostType": "Mining Multiplier",
-    "baseBoost": 200,
-    "maxBoost": 620,
-    "availability": "Mainland",
-    "cost": 980000,
-    "synergy": ["Mr. Edmund"],
-    "imageName": "lee_vatori"
-  },
-  {
+    "id": "cliff_walker",
     "name": "Cliff Walker",
-    "role": "Mine",
-    "boostType": "Drill Power",
-    "baseBoost": 160,
-    "maxBoost": 500,
-    "availability": "Continent 2",
-    "cost": 800000,
-    "synergy": ["Dr. Lilly"],
-    "imageName": "cliff_walker"
+    "department": "mineshaft",
+    "rarity": "rare",
+    "aliases": ["Cliff", "CliffWalker"],
+    "active": {
+      "name": "Drill Power",
+      "type": "drill_power",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 5.0
+    }
   },
   {
-    "name": "Dr. Lilly",
-    "role": "Warehouse",
-    "boostType": "Storage Capacity",
-    "baseBoost": 190,
-    "maxBoost": 580,
-    "availability": "Continent 2",
-    "cost": 870000,
-    "synergy": ["Cliff Walker"],
-    "imageName": "dr_lilly"
+    "id": "gordon",
+    "name": "Gordon",
+    "department": "mineshaft",
+    "rarity": "common",
+    "aliases": ["Gordon"],
+    "active": {
+      "name": "Mining Speed",
+      "type": "mining_speed",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 4.0
+    }
   },
   {
+    "id": "aurora",
+    "name": "Aurora",
+    "department": "mineshaft",
+    "rarity": "legendary",
+    "aliases": ["Aurora"],
+    "active": {
+      "name": "Light Beam",
+      "type": "beam",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 10.0
+    }
+  },
+  {
+    "id": "lorenzo",
+    "name": "Lorenzo",
+    "department": "mineshaft",
+    "rarity": "epic",
+    "aliases": ["Lorenzo"],
+    "active": {
+      "name": "Mining Multiplier",
+      "type": "multiplier",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 6.5
+    }
+  },
+  {
+    "id": "santa",
+    "name": "Santa",
+    "department": "mineshaft",
+    "rarity": "legendary",
+    "aliases": ["Santa Claus"],
+    "active": {
+      "name": "Gift Rush",
+      "type": "cash_multiplier",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 10.0
+    }
+  },
+  {
+    "id": "ezio",
+    "name": "Ezio",
+    "department": "mineshaft",
+    "rarity": "legendary",
+    "aliases": ["Ezio Auditore"],
+    "active": {
+      "name": "Assassin Strike",
+      "type": "multiplier",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 12.0
+    }
+  },
+  {
+    "id": "damian_jones",
     "name": "Damian Jones",
-    "role": "Transport",
-    "boostType": "Transport Efficiency",
-    "baseBoost": 210,
-    "maxBoost": 640,
-    "availability": "Continent 4",
-    "cost": 1020000,
-    "synergy": ["Chris Capella"],
-    "imageName": "damian_jones"
+    "department": "elevator",
+    "rarity": "rare",
+    "aliases": ["Damian", "DamianJones", "Jones"],
+    "active": {
+      "name": "Elevator Sprint",
+      "type": "elevator_speed",
+      "durationSeconds": 90,
+      "cooldownSeconds": 1200,
+      "multiplier": 6.0
+    }
   },
   {
+    "id": "freesia",
+    "name": "Freesia",
+    "department": "elevator",
+    "rarity": "epic",
+    "aliases": ["Freesia"],
+    "active": {
+      "name": "Elevator Multiplier",
+      "type": "elevator_multiplier",
+      "durationSeconds": 120,
+      "cooldownSeconds": 1200,
+      "multiplier": 6.0
+    }
+  },
+  {
+    "id": "dr_lilly",
+    "name": "Dr. Lilly",
+    "department": "elevator",
+    "rarity": "epic",
+    "aliases": ["Dr Lilly", "Lilly", "DrLilly"],
+    "active": {
+      "name": "Beam to Warehouse",
+      "type": "beam_warehouse",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 3.0
+    }
+  },
+  {
+    "id": "lee_vatori",
+    "name": "Lee Vatori",
+    "department": "elevator",
+    "rarity": "rare",
+    "aliases": ["Lee", "LeeVatori", "Vatori"],
+    "active": {
+      "name": "Elevator Efficiency",
+      "type": "elevator_efficiency",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 5.0
+    }
+  },
+  {
+    "id": "goodman_jr",
+    "name": "Goodman Jr.",
+    "department": "elevator",
+    "rarity": "rare",
+    "aliases": ["Goodman Jr", "GoodmanJr", "Junior"],
+    "active": {
+      "name": "Transport Speed",
+      "type": "transport_speed",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 4.0
+    }
+  },
+  {
+    "id": "lily",
+    "name": "Lily",
+    "department": "elevator",
+    "rarity": "common",
+    "aliases": ["Lily"],
+    "active": {
+      "name": "Elevator Speed",
+      "type": "elevator_speed",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 3.0
+    }
+  },
+  {
+    "id": "sue",
+    "name": "Sue",
+    "department": "elevator",
+    "rarity": "common",
+    "aliases": ["Sue"],
+    "active": {
+      "name": "Load Speed",
+      "type": "load_speed",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 3.0
+    }
+  },
+  {
+    "id": "mr_edmund",
+    "name": "Mr. Edmund",
+    "department": "warehouse",
+    "rarity": "rare",
+    "aliases": ["Mr Edmund", "Edmund", "MrEdmund"],
+    "active": {
+      "name": "Warehouse Burst",
+      "type": "warehouse_multiplier",
+      "durationSeconds": 120,
+      "cooldownSeconds": 1500,
+      "multiplier": 5.0
+    }
+  },
+  {
+    "id": "mark",
+    "name": "Mark",
+    "department": "warehouse",
+    "rarity": "common",
+    "aliases": ["Mark"],
+    "active": {
+      "name": "Warehouse Walk Speed",
+      "type": "walk_speed",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 5.0
+    }
+  },
+  {
+    "id": "mrs_goodman",
+    "name": "Mrs. Goodman",
+    "department": "warehouse",
+    "rarity": "rare",
+    "aliases": ["Mrs Goodman", "MrsGoodman", "Goodman"],
+    "active": {
+      "name": "Loading Efficiency",
+      "type": "loading",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 4.5
+    }
+  },
+  {
+    "id": "al_titude",
+    "name": "Al Titude",
+    "department": "warehouse",
+    "rarity": "epic",
+    "aliases": ["AlTitude", "Al", "Altitude"],
+    "active": {
+      "name": "Warehouse Multiplier",
+      "type": "warehouse_multiplier",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 6.0
+    }
+  },
+  {
+    "id": "chris_capella",
     "name": "Chris Capella",
-    "role": "Mine",
-    "boostType": "Ore Extraction Rate",
-    "baseBoost": 230,
-    "maxBoost": 680,
-    "availability": "Continent 4",
-    "cost": 1080000,
-    "synergy": ["Damian Jones"],
-    "imageName": "chris_capella"
+    "department": "warehouse",
+    "rarity": "rare",
+    "aliases": ["Chris", "Capella", "ChrisCapella"],
+    "active": {
+      "name": "Loading Speed",
+      "type": "loading_speed",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 5.0
+    }
+  },
+  {
+    "id": "jade",
+    "name": "Jade",
+    "department": "warehouse",
+    "rarity": "common",
+    "aliases": ["Jade"],
+    "active": {
+      "name": "Warehouse Speed",
+      "type": "warehouse_speed",
+      "durationSeconds": 300,
+      "cooldownSeconds": 1800,
+      "multiplier": 3.0
+    }
   }
-  ,
-  {"name":"Mr. Turner","role":"Mine","boostType":"Piggy Bank","baseBoost":1163,"availability":"Mainland","aliases":["Mr Turner","Turner"],"imageName":"mr_turner"},
-  {"name":"Thalia","role":"Mine","boostType":"Beam to Elevator","baseBoost":750,"availability":"Event","aliases":["Thalia"],"imageName":"thalia"},
-  {"name":"Chester","role":"Mine","boostType":"Mineshaft Speed","baseBoost":400,"availability":"Mainland","aliases":["Chester"],"imageName":"chester"},
-  {"name":"Mark","role":"Warehouse","boostType":"Warehouse Walk Speed","baseBoost":524,"availability":"Mainland","aliases":["Mark"],"imageName":"mark"},
-  {"name":"Al Titude","role":"Warehouse","boostType":"Warehouse Multiplier","baseBoost":600,"availability":"Mainland","aliases":["Al Titude","AlTitude"],"imageName":"al_titude"}
 ]

@@ -3,7 +3,14 @@ import CryptoKit
 
 /// Computes perceptual hashes for images to detect duplicates.
 public struct ImageHasher {
-  
+
+  /// Builds a full fingerprint that captures both perceptual similarity and coarse pixel layout.
+  public static func fingerprint(for image: UIImage) -> ImageFingerprint? {
+    guard let perceptualHash = perceptualHash(for: image) else { return nil }
+    let pixelDigest = pixelDigest(for: image)
+    return ImageFingerprint(perceptualHash: perceptualHash, pixelDigest: pixelDigest)
+  }
+
   /// Computes a perceptual hash (pHash) for an image.
   /// Returns a hash string that can be compared for similarity.
   public static func perceptualHash(for image: UIImage) -> String? {
@@ -11,25 +18,25 @@ public struct ImageHasher {
           let cgImage = resizedImage.cgImage else {
       return nil
     }
-    
+
     // Convert to grayscale and extract pixel data
     guard let grayscaleData = grayscalePixelData(from: cgImage) else {
       return nil
     }
-    
+
     // Compute DCT (Discrete Cosine Transform) approximation
     let dctValues = simpleDCT(grayscaleData, width: 32, height: 32)
-    
+
     // Take top-left 8x8 coefficients (excluding DC component)
     var hash: UInt64 = 0
     let median = computeMedian(dctValues)
-    
+
     for i in 0..<64 {
       if dctValues[i] > median {
         hash |= (1 << i)
       }
     }
-    
+
     return String(hash, radix: 16)
   }
   
@@ -53,6 +60,21 @@ public struct ImageHasher {
       return false
     }
     return distance <= threshold
+  }
+
+  /// Creates a coarse pixel digest that highlights visible differences between cards.
+  /// Quantises pixels to reduce sensitivity to compression noise while still catching distinct cards.
+  public static func pixelDigest(for image: UIImage) -> String? {
+    guard let cgImage = resize(image, to: CGSize(width: 64, height: 64))?.cgImage else {
+      return nil
+    }
+
+    guard let quantized = quantizedPixelData(from: cgImage) else {
+      return nil
+    }
+
+    let digest = SHA256.hash(data: quantized)
+    return digest.map { String(format: "%02x", $0) }.joined()
   }
   
   // MARK: - Private Helpers
@@ -124,5 +146,35 @@ public struct ImageHasher {
     } else {
       return sorted[count / 2]
     }
+  }
+
+  private static func quantizedPixelData(from cgImage: CGImage) -> Data? {
+    let width = 64
+    let height = 64
+    let bytesPerPixel = 4
+    let bytesPerRow = width * bytesPerPixel
+    var pixels = [UInt8](repeating: 0, count: width * height * bytesPerPixel)
+
+    guard let context = CGContext(
+      data: &pixels,
+      width: width,
+      height: height,
+      bitsPerComponent: 8,
+      bytesPerRow: bytesPerRow,
+      space: CGColorSpaceCreateDeviceRGB(),
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else {
+      return nil
+    }
+
+    context.interpolationQuality = .medium
+    context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+    // Quantise each channel to 4 bits to minimise noise-driven differences.
+    for index in 0..<pixels.count {
+      pixels[index] &= 0xF0
+    }
+
+    return Data(pixels)
   }
 }

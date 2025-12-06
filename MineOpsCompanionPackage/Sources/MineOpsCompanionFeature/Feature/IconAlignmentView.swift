@@ -22,8 +22,11 @@ struct IconAlignmentView: View {
     @State private var containerSize = CGSize.zero
     @State private var isMagnifying = false
     @State private var magnifyInitialOffset = CGSize.zero
+    @State private var magnifyInitialScale: CGFloat
     
     private let cropSize: CGFloat = 200
+    private let minScale: CGFloat = 0.5
+    private let maxScale: CGFloat = 8.0
     
     init(entry: HarvestEntry, initialTransform: IconAlignmentTransform = .init(), onSave: @escaping (HarvestEntry, IconAlignmentTransform) -> Void) {
         self.entry = entry
@@ -33,6 +36,7 @@ struct IconAlignmentView: View {
         _lastOffset = State(initialValue: initialTransform.offset)
         _scale = State(initialValue: initialTransform.scale)
         _lastScale = State(initialValue: initialTransform.scale)
+        _magnifyInitialScale = State(initialValue: initialTransform.scale)
     }
 
     var body: some View {
@@ -45,7 +49,7 @@ struct IconAlignmentView: View {
                 Text(fullImage == nil ? "Select the manager screenshot, then drag and pinch to align the icon within the crop box" : "Drag and pinch to align the icon within the crop box")
                     .font(.caption)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.7))
                     .padding(.horizontal)
                 
                 // Photo picker (only show if no image loaded)
@@ -67,6 +71,11 @@ struct IconAlignmentView: View {
                                let image = UIImage(data: data) {
                                 await MainActor.run {
                                     fullImage = image
+                                    offset = .zero
+                                    lastOffset = .zero
+                                    magnifyInitialOffset = .zero
+                                    magnifyInitialScale = scale
+                                    lastScale = scale
                                 }
                             }
                         }
@@ -77,7 +86,7 @@ struct IconAlignmentView: View {
                     VStack(spacing: 12) {
                         // Interactive canvas
                         ZStack {
-                            Color.black.opacity(0.5)
+                            Color.mineDarkLight.opacity(0.5)
                             
                             // Full screenshot with drag/zoom
                             GeometryReader { geometry in
@@ -117,10 +126,26 @@ struct IconAlignmentView: View {
                                                 },
                                             MagnificationGesture()
                                                 .onChanged { value in
-                                                    scale = lastScale * value
+                                                    if !isMagnifying {
+                                                        isMagnifying = true
+                                                        magnifyInitialScale = scale
+                                                        magnifyInitialOffset = offset
+                                                    }
+
+                                                    let proposed = magnifyInitialScale * value
+                                                    let clamped = min(max(proposed, minScale), maxScale)
+                                                    scale = clamped
+
+                                                    let ratio = clamped / magnifyInitialScale
+                                                    offset = CGSize(
+                                                        width: magnifyInitialOffset.width * ratio,
+                                                        height: magnifyInitialOffset.height * ratio
+                                                    )
                                                 }
                                                 .onEnded { _ in
+                                                    isMagnifying = false
                                                     lastScale = scale
+                                                    lastOffset = offset
                                                 }
                                         )
                                     )
@@ -151,7 +176,7 @@ struct IconAlignmentView: View {
                             VStack(spacing: 4) {
                                 Text("Preview")
                                     .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.6))
                                 
                                 Image(uiImage: previewImage)
                                     .interpolation(.none)
@@ -166,7 +191,7 @@ struct IconAlignmentView: View {
                     
                     Text("Drag to move • Pinch to zoom")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.5))
                     
                     // Actions
                     HStack(spacing: 16) {
@@ -175,6 +200,8 @@ struct IconAlignmentView: View {
                             lastOffset = .zero
                             scale = 1.0
                             lastScale = 1.0
+                            magnifyInitialOffset = .zero
+                            magnifyInitialScale = 1.0
                         }
                         .buttonStyle(.bordered)
                         

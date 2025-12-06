@@ -9,9 +9,9 @@ public enum MineOpsColors {
     /// Sub-surface tint for controls and secondary groupings.
     public static let light = Color(red: 34 / 255, green: 49 / 255, blue: 64 / 255)
     /// Primary neon accent used for actionable affordances.
-    public static let accentCyan = Color(red: 0 / 255, green: 196 / 255, blue: 222 / 255)
+    public static let accentCyan = Color(red: 0.0, green: 196.0 / 255.0, blue: 222.0 / 255.0)
     /// Secondary accent that pairs with cyan for stateful highlights.
-    public static let accentOrange = Color(red: 255 / 255, green: 165 / 255, blue: 89 / 255)
+    public static let accentOrange = Color(red: 1.0, green: 165.0 / 255.0, blue: 89.0 / 255.0)
 }
 
 public extension Color {

@@ -6,6 +6,7 @@ import VisionKit
 @MainActor
 public final class OCRProcessor: ObservableObject {
     @Published private(set) public var results: [RecognizedSM] = []
+    @Published private(set) public var skippedCount: Int = 0
     private let directory: [SMDirectoryEntry] = (try? SMDirectory.load()) ?? []
     
     public init() {}
@@ -14,11 +15,23 @@ public final class OCRProcessor: ObservableObject {
         for image in images {
             guard let cgImage = image.cgImage else { continue }
             let text = await Self.recognizeText(from: cgImage)
+            
+            // Validate that this looks like a Super Manager card
+            let validation = SMCardValidator.validate(ocrText: text)
+            if !validation.isValid {
+                print("⏭️ Skipping non-SM image: \(validation.summary)")
+                skippedCount += 1
+                continue
+            }
+            
+            print("✅ Valid SM card detected: \(validation.summary)")
+            
             let stats = SMStatsParser.parse(text: text)
             let level = stats.level?.current ?? OCRLevelParser.parse(from: text)
             let match = DirectoryMatcher.bestMatch(in: text, directory: directory)
             let displayName = match?.name ?? OCRTextHeuristics.guessDisplayName(from: text)
             let fields = OCRFieldExtraction.extract(from: text)
+            let fingerprint = ImageHasher.fingerprint(for: image)
 
             let recognized = RecognizedSM(
                 sourceImage: image,
@@ -27,6 +40,7 @@ public final class OCRProcessor: ObservableObject {
                 directoryMatch: match,
                 resolvedName: displayName,
                 stats: stats,
+                imageFingerprint: fingerprint,
                 rarity: fields.rarity,
                 role: fields.role,
                 stars: fields.stars,
@@ -54,6 +68,7 @@ public final class OCRProcessor: ObservableObject {
 
     func reset() {
         results = []
+        skippedCount = 0
     }
 
     private nonisolated static func recognizeText(from cgImage: CGImage) async -> String {

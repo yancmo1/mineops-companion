@@ -1,0 +1,171 @@
+import Foundation
+
+// MARK: - Strategy Prompt
+
+struct StrategyPrompt: Codable, Hashable {
+    let mineName: String
+    let mineLevel: Int
+    let shaftLevel: Int
+    let selectedManagers: [String]
+    let goal: String
+
+    var text: String {
+        let roster = selectedManagers.joined(separator: ", ")
+        return """
+        You are an expert Idle Miner Tycoon strategist.
+        Mine: \(mineName)
+        Mine Level: \(mineLevel)
+        Shaft Level: \(shaftLevel)
+        Selected Managers: \(roster.isEmpty ? "None provided" : roster)
+        Goal: \(goal)
+        Return ONLY JSON matching this schema:
+        { "comboName": "string", "recommendedManagers": ["string"], "strategySummary": "string", "estimatedMultiplier": number }
+        """
+    }
+
+    var cacheKey: String {
+        "\(mineName.lowercased())|\(mineLevel)|\(shaftLevel)|\(selectedManagers.joined(separator: ","))|\(goal.lowercased())"
+    }
+}
+
+// MARK: - Responses API Helpers
+
+struct ResponsesEnvelope: Decodable {
+    struct Output: Decodable {
+        struct Content: Decodable {
+            let type: String?
+            let text: String?
+        }
+
+        let content: [Content]
+    }
+
+    let output: [Output]?
+    let outputText: [String]?
+
+    var firstText: String? {
+        if let text = output?
+            .compactMap({ output -> String? in
+                output.content
+                    .compactMap { $0.text?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .first(where: { !$0.isEmpty })
+            })
+            .first {
+            return text
+        }
+
+        if let fallback = outputText?
+            .map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+            .first(where: { !$0.isEmpty }) {
+            return fallback
+        }
+
+        return nil
+    }
+}
+
+enum ResponsesPayloadBuilder {
+    static func strategy(model: String, prompt: String) -> [String: Any] {
+        let payload: [String: Any] = [
+            "model": model,
+            "input": [
+                [
+                    "role": "user",
+                    "content": [
+                        ["type": "text", "text": prompt]
+                    ]
+                ]
+            ],
+            "response": [
+                "format": [
+                    "type": "json_schema",
+                    "name": "strategy_schema",
+                    "schema": [
+                        "name": "strategy",
+                        "schema": [
+                            "type": "object",
+                            "properties": [
+                                "comboName": ["type": "string"],
+                                "recommendedManagers": [
+                                    "type": "array",
+                                    "items": ["type": "string"]
+                                ],
+                                "strategySummary": ["type": "string"],
+                                "estimatedMultiplier": ["type": "number"]
+                            ],
+                            "required": [
+                                "comboName",
+                                "recommendedManagers",
+                                "strategySummary",
+                                "estimatedMultiplier"
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            "max_output_tokens": 300
+        ]
+        
+        print("🧾 Final payload:", payload)
+        return payload
+    }
+
+    static func managerDetection(model: String, prompt: String, base64Image: String) -> [String: Any] {
+        let payload: [String: Any] = [
+            "model": model,
+            "input": [
+                [
+                    "role": "user",
+                    "content": [
+                        ["type": "text", "text": prompt],
+                        [
+                            "type": "image_url",
+                            "image_url": [
+                                "url": "data:image/png;base64,\(base64Image)"
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            "response": [
+                "format": [
+                    "type": "json_schema",
+                    "name": "strategy_schema",
+                    "schema": [
+                        "name": "strategy",
+                        "schema": [
+                            "type": "object",
+                            "properties": [
+                                "comboName": ["type": "string"],
+                                "recommendedManagers": [
+                                    "type": "array",
+                                    "items": ["type": "string"]
+                                ],
+                                "strategySummary": ["type": "string"],
+                                "estimatedMultiplier": ["type": "number"]
+                            ],
+                            "required": [
+                                "comboName",
+                                "recommendedManagers",
+                                "strategySummary",
+                                "estimatedMultiplier"
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            "max_output_tokens": 300
+        ]
+        
+        print("🧾 Final payload (detection):", payload)
+        return payload
+    }
+}
+
+struct OpenAIErrorEnvelope: Decodable {
+    struct APIError: Decodable {
+        let message: String
+    }
+
+    let error: APIError
+}

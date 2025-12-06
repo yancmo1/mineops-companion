@@ -1,0 +1,199 @@
+import Foundation
+
+actor AIStrategyEngine {
+    enum StrategyError: LocalizedError {
+        case missingAPIKey
+        case invalidResponse
+        case apiError(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .missingAPIKey: return "OPENAI_API_KEY not found in environment variables."
+            case .invalidResponse: return "Unable to decode strategy response."
+            case .apiError(let message): return message
+            }
+        }
+    }
+
+    static let shared = AIStrategyEngine()
+
+    private let endpoint: URL = URL(string: "https://api.openai.com/v1/responses")!
+    private let model = "gpt-4o-mini"
+    private let maxRetries = 3
+    private var cache: [String: StrategyResponse] = [:]
+    private let session: URLSession
+
+    private init() {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 60
+        session = URLSession(configuration: configuration)
+    }
+
+    func fetchStrategy(prompt: String) async throws -> StrategyResponse {
+        if let cached = cache[prompt] {
+            print("🧩 Cache hit for strategy prompt")
+            return cached
+        }
+
+        guard let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"], !apiKey.isEmpty else {
+            throw StrategyError.missingAPIKey
+        }
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try Self.encodePayload(prompt: prompt, model: model)
+
+        let strategy = try await perform(request: request, attempt: 1)
+        cache[prompt] = strategy
+        return strategy
+    }
+
+    func clearCache() { cache.removeAll() }
+
+    private func perform(request: URLRequest, attempt: Int) async throws -> StrategyResponse {
+        do {
+            let (data, response) = try await session.data(for: request)
+            if let raw = String(data: data, encoding: .utf8) {
+                print("🧠 RAW GPT RESPONSE:\n\(raw)")
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw StrategyError.invalidResponse
+            }
+
+            guard (200..<300).contains(httpResponse.statusCode) else {
+                if attempt < maxRetries, Self.shouldRetry(statusCode: httpResponse.statusCode) {
+                    print("⚠️ Retry #\(attempt) for HTTP \(httpResponse.statusCode)")
+                    try await Self.waitBeforeRetry(attempt: attempt)
+                    return try await perform(request: request, attempt: attempt + 1)
+                }
+
+                if let message = try? decodeAPIError(from: data) {
+                    throw StrategyError.apiError(message)
+                }
+                throw StrategyError.invalidResponse
+            }
+
+            do {
+                return try Self.decodeStrategy(from: data)
+            } catch {
+                if attempt < maxRetries {
+                    print("⚠️ Retry #\(attempt) decode failure: \(error.localizedDescription)")
+                    try await Self.waitBeforeRetry(attempt: attempt)
+                    return try await perform(request: request, attempt: attempt + 1)
+                }
+                throw error
+            }
+        } catch {
+            if attempt < maxRetries, Self.shouldRetry(error: error) {
+                print("⚠️ Retry #\(attempt) network: \(error.localizedDescription)")
+                try await Self.waitBeforeRetry(attempt: attempt)
+                return try await perform(request: request, attempt: attempt + 1)
+            }
+            throw error
+        }
+    }
+
+    private static func encodePayload(prompt: String, model: String) throws -> Data {
+        let payload: [String: Any] = [
+            "model": model,
+            "input": [
+                [
+                    "role": "user",
+                    "content": [
+                        ["type": "text", "text": prompt]
+                    ]
+                ]
+            ],
+            "response": [
+                "text": [
+                    "format": [
+                        "type": "json_schema",
+                        "name": "strategy_schema",
+                        "schema": [
+                            "type": "object",
+                            "properties": [
+                                "comboName": ["type": "string"],
+                                "recommendedManagers": ["type": "array", "items": ["type": "string"]],
+                                "strategySummary": ["type": "string"],
+                                "estimatedMultiplier": ["type": "number"]
+                            ],
+                            "required": [
+                                "comboName",
+                                "recommendedManagers",
+                                "strategySummary",
+                                "estimatedMultiplier"
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            "max_output_tokens": 300
+        ]
+
+        print("🧾 Final payload:", payload)
+        return try JSONSerialization.data(withJSONObject: payload)
+    }
+
+    private static func decodeStrategy(from data: Data) throws -> StrategyResponse {
+        if let direct = try? JSONDecoder().decode(StrategyResponse.self, from: data) {
+            return direct
+        }
+
+        struct ResponsesAPIResponse: Decodable {
+            struct Output: Decodable {
+                struct Content: Decodable { let text: String? }
+                let content: [Content]
+            }
+            let output: [Output]
+        }
+
+        if let responsesAPI = try? JSONDecoder().decode(ResponsesAPIResponse.self, from: data),
+           let content = responsesAPI.output.first?.content.first?.text,
+           let textData = content.data(using: .utf8),
+           let decoded = try? JSONDecoder().decode(StrategyResponse.self, from: textData) {
+            return decoded
+        }
+
+        throw StrategyError.invalidResponse
+    }
+
+    private static func shouldRetry(statusCode: Int) -> Bool {
+        statusCode == 429 || (500..<600).contains(statusCode)
+    }
+
+    private static func shouldRetry(error: Error) -> Bool {
+        guard let urlError = error as? URLError else { return false }
+        return [
+            URLError.timedOut, .cannotFindHost, .cannotConnectToHost,
+            .networkConnectionLost, .dnsLookupFailed, .notConnectedToInternet
+        ].contains(urlError.code)
+    }
+
+    private static func waitBeforeRetry(attempt: Int) async throws {
+        try await Task.sleep(nanoseconds: UInt64(Double(attempt) * 1_000_000_000))
+    }
+
+    private func decodeAPIError(from data: Data) -> String? {
+        if let envelope = try? JSONDecoder().decode(OpenAIErrorEnvelope.self, from: data) {
+            return envelope.error.message
+        }
+        if let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let message = root["message"] as? String {
+            return message
+        }
+        return nil
+    }
+
+#if DEBUG
+    static func debugPayload(prompt: String, model: String = "gpt-4o-mini") -> [String: Any] {
+        [
+            "model": model,
+            "input": [["role": "user", "content": [["type": "text", "text": prompt]]]]
+        ]
+    }
+#endif
+}

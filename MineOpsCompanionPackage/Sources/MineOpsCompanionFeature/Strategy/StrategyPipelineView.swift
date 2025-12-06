@@ -1,37 +1,138 @@
-import PhotosUI
 import SwiftUI
-import UIKit
 
 struct StrategyPipelineView: View {
     @EnvironmentObject private var review: OCRReviewViewModel
     @StateObject private var pipeline = AIStrategyPipeline.shared
-    @State private var mineName = "Frontier Mine"
-    @State private var mineLevel = 120
-    @State private var shaftLevel = 25
+    
+    // Persisted mine settings
+    @State private var selectedMineType: MineType = MineSettingsStore.shared.selectedMineType
+    @State private var mainlandMineNumber: Int = MineSettingsStore.shared.mainlandMineNumber
+    @State private var selectedContinentMine: ContinentMine = .ruby
+    @State private var prestige: Int = 5
+    @State private var maxShaft: Int = 30
+    
     @State private var notes = ""
-    @State private var screenshots: [UIImage] = []
-    @State private var pickerItems: [PhotosPickerItem] = []
     @State private var selectedManagerIDs: Set<String> = []
+    
+    private let settingsStore = MineSettingsStore.shared
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: MineOpsLayout.sectionSpacing) {
-                    CardContainer(title: "Mine Details") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            TextField("Mine name", text: $mineName)
-                                .textFieldStyle(.roundedBorder)
-                                .accessibilityIdentifier("mineNameField")
-
-                            Stepper(value: $mineLevel, in: 1...999) {
-                                Text("Mine Level: \(mineLevel)")
+                    CardContainer(title: "Mine Details", titleColor: .accentCyan) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            // Mine Type Picker
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Mine Type")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.white.opacity(0.7))
+                                Picker("Mine Type", selection: $selectedMineType) {
+                                    ForEach(MineType.allCases) { type in
+                                        Text(type.rawValue).tag(type)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .tint(.accentCyan)
+                                .accessibilityIdentifier("mineTypePicker")
                             }
-                            .accessibilityIdentifier("mineLevelStepper")
-
-                            Stepper(value: $shaftLevel, in: 1...999) {
-                                Text("Shaft Level: \(shaftLevel)")
+                            
+                            // Mainland: Number picker for mine progression
+                            if selectedMineType == .mainland {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Mine Number")
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.white.opacity(0.7))
+                                    HStack(spacing: 16) {
+                                        Button(action: { if mainlandMineNumber > 1 { mainlandMineNumber -= 1 } }) {
+                                            Image(systemName: "minus.circle.fill")
+                                                .foregroundStyle(Color.accentCyan)
+                                                .font(.title2)
+                                        }
+                                        Text("\(mainlandMineNumber)")
+                                            .foregroundStyle(Color.white)
+                                            .font(.title3.monospacedDigit())
+                                            .frame(minWidth: 60)
+                                        Button(action: { mainlandMineNumber += 1 }) {
+                                            Image(systemName: "plus.circle.fill")
+                                                .foregroundStyle(Color.accentCyan)
+                                                .font(.title2)
+                                        }
+                                    }
+                                    .accessibilityIdentifier("mainlandMineStepper")
+                                }
                             }
-                            .accessibilityIdentifier("shaftLevelStepper")
+                            
+                            // Continent: Mine type picker within that continent
+                            if let continentMines = selectedMineType.continentMines {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Mine")
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.white.opacity(0.7))
+                                    Picker("Continent Mine", selection: $selectedContinentMine) {
+                                        ForEach(continentMines) { mine in
+                                            Text(mine.rawValue).tag(mine)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .tint(.accentCyan)
+                                    .accessibilityIdentifier("continentMinePicker")
+                                }
+                                .onAppear {
+                                    // Reset to first available mine if current selection not in list
+                                    if !continentMines.contains(selectedContinentMine) {
+                                        selectedContinentMine = continentMines.first ?? .ruby
+                                    }
+                                }
+                            }
+                            
+                            // Prestige Level
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Prestige Level")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.white.opacity(0.7))
+                                HStack(spacing: 16) {
+                                    Button(action: { if prestige > 0 { prestige -= 1 } }) {
+                                        Image(systemName: "minus.circle.fill")
+                                            .foregroundStyle(Color.accentCyan)
+                                            .font(.title2)
+                                    }
+                                    Text("\(prestige)")
+                                        .foregroundStyle(Color.white)
+                                        .font(.title3.monospacedDigit())
+                                        .frame(minWidth: 60)
+                                    Button(action: { if prestige < 999 { prestige += 1 } }) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .foregroundStyle(Color.accentCyan)
+                                            .font(.title2)
+                                    }
+                                }
+                                .accessibilityIdentifier("prestigeStepper")
+                            }
+                            
+                            // Max Shaft Level
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Max Shaft Level")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.white.opacity(0.7))
+                                HStack(spacing: 16) {
+                                    Button(action: { if maxShaft > 1 { maxShaft -= 1 } }) {
+                                        Image(systemName: "minus.circle.fill")
+                                            .foregroundStyle(Color.accentCyan)
+                                            .font(.title2)
+                                    }
+                                    Text("\(maxShaft)")
+                                        .foregroundStyle(Color.white)
+                                        .font(.title3.monospacedDigit())
+                                        .frame(minWidth: 60)
+                                    Button(action: { if maxShaft < 999 { maxShaft += 1 } }) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .foregroundStyle(Color.accentCyan)
+                                            .font(.title2)
+                                    }
+                                }
+                                .accessibilityIdentifier("maxShaftStepper")
+                            }
 
                             TextField("Notes (optional)", text: $notes, axis: .vertical)
                                 .textFieldStyle(.roundedBorder)
@@ -39,11 +140,31 @@ struct StrategyPipelineView: View {
                         }
                     }
 
-                    CardContainer(title: "Select Managers") {
+                    MineOpsButton(label: pipeline.isAnalyzing ? "Analyzing…" : "Run AI Strategy", icon: "sparkles") {
+                        Task {
+                            let mineContext = MineContext(
+                                type: selectedMineType,
+                                mainlandMineNumber: selectedMineType == .mainland ? mainlandMineNumber : nil,
+                                continentMine: selectedMineType.continentMines != nil ? selectedContinentMine : nil,
+                                prestige: prestige,
+                                maxShaft: maxShaft
+                            )
+                            await pipeline.runFullPipeline(
+                                mineContext: mineContext,
+                                screenshots: [],
+                                notes: notes.isEmpty ? nil : notes,
+                                selectedManagers: selectedManagerNames
+                            )
+                        }
+                    }
+                    .disabled(pipeline.isAnalyzing || selectedManagerIDs.isEmpty)
+                    .accessibilityIdentifier("runStrategyButton")
+
+                    CardContainer(title: "Select Managers", titleColor: .accentCyan) {
                         if managerOptions.isEmpty {
                             Text("Import super managers on the Manager tab before running an AI strategy.")
                                 .mineOpsBody()
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.7))
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
                             VStack(spacing: 10) {
@@ -53,14 +174,15 @@ struct StrategyPipelineView: View {
                                     } label: {
                                         HStack(spacing: 12) {
                                             Image(systemName: selectedManagerIDs.contains(option.id) ? "checkmark.circle.fill" : "circle")
-                                                .foregroundStyle(selectedManagerIDs.contains(option.id) ? Color.accentCyan : .secondary)
+                                                .foregroundStyle(selectedManagerIDs.contains(option.id) ? Color.accentCyan : .white.opacity(0.4))
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(option.name)
                                                     .mineOpsBody()
+                                                    .foregroundStyle(.white)
                                                 if let detail = option.detail {
                                                     Text(detail)
                                                         .font(.caption)
-                                                        .foregroundStyle(.secondary)
+                                                        .foregroundStyle(.white.opacity(0.6))
                                                 }
                                             }
                                             Spacer()
@@ -88,74 +210,8 @@ struct StrategyPipelineView: View {
                         }
                     }
 
-                    CardContainer(title: "Optional Screenshots") {
-                        VStack(spacing: 12) {
-                            PhotosPicker(
-                                selection: $pickerItems,
-                                maxSelectionCount: 6,
-                                matching: .images
-                            ) {
-                                Label("Add Screenshots", systemImage: "photo.on.rectangle")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .accessibilityIdentifier("addScreenshotButton")
-                            .onChange(of: pickerItems) { _, newItems in
-                                Task { await loadImages(from: newItems) }
-                            }
-
-                            if screenshots.isEmpty {
-                                Text("Optional: Add screenshots to auto-detect managers.")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            } else {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Loaded \(screenshots.count) screenshot(s)")
-                                        .font(.subheadline)
-                                    ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 8) {
-                                            ForEach(Array(screenshots.enumerated()), id: \.offset) { index, image in
-                                                Image(uiImage: image)
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 80, height: 80)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                                    .overlay(alignment: .topTrailing) {
-                                                        Button {
-                                                            screenshots.remove(at: index)
-                                                        } label: {
-                                                            Image(systemName: "xmark.circle.fill")
-                                                                .symbolRenderingMode(.hierarchical)
-                                                                .foregroundStyle(.white, .red)
-                                                        }
-                                                        .offset(x: 6, y: -6)
-                                                        .accessibilityIdentifier("removeScreenshotButton_\(index)")
-                                                    }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    MineOpsButton(label: pipeline.isAnalyzing ? "Analyzing…" : "Run AI Strategy", icon: "sparkles") {
-                        Task {
-                            await pipeline.runFullPipeline(
-                                mineName: mineName,
-                                mineLevel: mineLevel,
-                                shaftLevel: shaftLevel,
-                                screenshots: screenshots,
-                                notes: notes.isEmpty ? nil : notes,
-                                selectedManagers: selectedManagerNames
-                            )
-                        }
-                    }
-                    .disabled(pipeline.isAnalyzing || (selectedManagerIDs.isEmpty && screenshots.isEmpty))
-                    .accessibilityIdentifier("runStrategyButton")
-
                     if let error = pipeline.lastError {
-                        CardContainer(title: "Error") {
+                        CardContainer(title: "Error", titleColor: .accentCyan) {
                             Text(error)
                                 .font(.footnote)
                                 .foregroundStyle(.red)
@@ -164,27 +220,38 @@ struct StrategyPipelineView: View {
                     }
 
                     if let strategy = pipeline.lastStrategy {
-                        CardContainer(title: strategy.comboName) {
+                        CardContainer(title: strategy.comboName, titleColor: .accentCyan) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(strategy.strategySummary)
                                     .mineOpsBody()
+                                    .foregroundStyle(Color.accentCyan)
                                 if !strategy.recommendedManagers.isEmpty {
                                     Text("Managers: " + strategy.recommendedManagers.joined(separator: ", "))
                                         .font(.subheadline)
+                                        .foregroundStyle(Color.accentCyan)
                                 }
                                 if let multiplier = strategy.estimatedMultiplier {
                                     Text(String(format: "Estimated Boost: %.2fx", multiplier))
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color.accentCyan.opacity(0.7))
                                 }
+                            }
+                        }
+                        if let plan = strategy.detailedPlan, !plan.isEmpty {
+                            CardContainer(title: "Tactical Plan") {
+                                Text(plan)
+                                    .mineOpsBody()
+                                    .foregroundStyle(.white)
+                                    .textSelection(.enabled)
                             }
                         }
                     }
 
                     if !pipeline.detectedManagers.isEmpty {
-                        CardContainer(title: "Detected Managers") {
+                        CardContainer(title: "Detected Managers", titleColor: .accentCyan) {
                             Text(pipeline.detectedManagers.joined(separator: ", "))
                                 .font(.footnote)
+                                .foregroundStyle(Color.accentCyan)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -204,30 +271,76 @@ struct StrategyPipelineView: View {
                     .buttonStyle(.bordered)
                     .accessibilityIdentifier("clearCacheButton")
                 }
-                .padding(MineOpsLayout.cardPadding)
+                .padding(.horizontal, MineOpsLayout.cardPadding)
+                .padding(.top, 8)
+                .padding(.bottom, MineOpsLayout.cardPadding)
             }
-            .navigationTitle("AI Strategy")
+            .navigationTitle("")
             .background(Color.mineDark.ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("AI Strategy")
+                        .font(.title.bold())
+                        .foregroundStyle(Color.accentCyan)
+                        .accessibilityIdentifier("aiStrategyHeader")
+                }
+            }
             .task { seedSelectionIfNeeded() }
             .onChange(of: review.recognized) { _, _ in seedSelectionIfNeeded() }
-        }
-    }
-
-    private func loadImages(from items: [PhotosPickerItem]) async {
-        var loaded: [UIImage] = []
-        for item in items {
-            do {
-                if let data = try await item.loadTransferable(type: Data.self),
-                   let image = UIImage(data: data) {
-                    loaded.append(image)
+            // Persist mine type selection
+            .onChange(of: selectedMineType) { _, newType in
+                settingsStore.selectedMineType = newType
+                // Load stored continent mine for this mine type if applicable
+                if let mines = newType.continentMines {
+                    selectedContinentMine = settingsStore.selectedContinentMine(for: newType)
+                    // Validate it's in the available list
+                    if !mines.contains(selectedContinentMine) {
+                        selectedContinentMine = mines.first ?? .ruby
+                    }
                 }
-            } catch {
-                continue
+                // Load prestige and maxShaft for this mine type
+                loadSettingsForCurrentMine()
+            }
+            // Persist individual settings
+            .onChange(of: mainlandMineNumber) { _, newValue in
+                settingsStore.mainlandMineNumber = newValue
+            }
+            .onChange(of: selectedContinentMine) { _, newValue in
+                settingsStore.setSelectedContinentMine(newValue, for: selectedMineType)
+                // Reload settings for the new continent mine
+                loadSettingsForCurrentMine()
+            }
+            .onChange(of: prestige) { _, newValue in
+                saveCurrentMineSettings()
+            }
+            .onChange(of: maxShaft) { _, newValue in
+                saveCurrentMineSettings()
+            }
+            .onAppear {
+                // Load stored continent mine for current type
+                if selectedMineType.continentMines != nil {
+                    selectedContinentMine = settingsStore.selectedContinentMine(for: selectedMineType)
+                }
+                loadSettingsForCurrentMine()
             }
         }
-        await MainActor.run {
-            screenshots.append(contentsOf: loaded)
-        }
+    }
+    
+    /// The continent mine to use for storage, if applicable
+    private var currentContinentMine: ContinentMine? {
+        selectedMineType.continentMines != nil ? selectedContinentMine : nil
+    }
+    
+    /// Loads prestige and maxShaft for the current mine configuration
+    private func loadSettingsForCurrentMine() {
+        prestige = settingsStore.prestige(for: selectedMineType, continentMine: currentContinentMine)
+        maxShaft = settingsStore.maxShaft(for: selectedMineType, continentMine: currentContinentMine)
+    }
+    
+    /// Saves prestige and maxShaft for the current mine configuration
+    private func saveCurrentMineSettings() {
+        settingsStore.setPrestige(prestige, for: selectedMineType, continentMine: currentContinentMine)
+        settingsStore.setMaxShaft(maxShaft, for: selectedMineType, continentMine: currentContinentMine)
     }
 
     private func seedSelectionIfNeeded() {

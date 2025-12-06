@@ -1,5 +1,6 @@
 import CoreData
 import Foundation
+import OSLog
 
 @MainActor
 final class CoreDataManager {
@@ -22,13 +23,19 @@ final class CoreDataManager {
         container = NSPersistentContainer(name: modelName, managedObjectModel: model)
         let description = NSPersistentStoreDescription()
         description.type = NSSQLiteStoreType
-        description.url = Self.defaultStoreURL()
+        let storeURL = Self.defaultStoreURL()
+        description.url = storeURL
         description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
         container.persistentStoreDescriptions = [description]
 
-        container.loadPersistentStores { _, error in
+        Logger.storage.info("📦 CoreData store location: \(storeURL.path)")
+
+        container.loadPersistentStores { storeDescription, error in
             if let error {
+                Logger.storage.error("❌ Failed to load Core Data store: \(error.localizedDescription)")
                 assertionFailure("Failed to load Core Data store: \(error)")
+            } else {
+                Logger.storage.info("✅ CoreData store loaded: \(storeDescription.url?.path ?? "unknown")")
             }
         }
 

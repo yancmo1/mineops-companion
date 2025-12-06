@@ -26,7 +26,7 @@ public final class OCRReviewViewModel: ObservableObject {
             let displayName = match?.name ?? OCRTextHeuristics.guessDisplayName(from: text)
             let fields = OCRFieldExtraction.extract(from: text)
 
-            let imageHash = ImageHasher.perceptualHash(for: image)
+            let imageFingerprint = ImageHasher.fingerprint(for: image)
             
             // Detect passive ability unlock status using color analysis
             let passiveStatuses = AbilityDetector.detectPassives(in: image)
@@ -39,7 +39,7 @@ public final class OCRReviewViewModel: ObservableObject {
                 directoryMatch: match,
                 resolvedName: displayName,
                 stats: stats,
-                imageHash: imageHash,
+                imageFingerprint: imageFingerprint,
                 rarity: fields.rarity,
                 role: fields.role,
                 stars: fields.stars,
@@ -87,9 +87,9 @@ public final class OCRReviewViewModel: ObservableObject {
         recognized = persistence.saveRecognized(recognized)
         
         // Remove hash from store
-        if let hash = record.imageHash {
+        if let fingerprint = record.imageFingerprint {
             Task {
-                await ImageHashStore.shared.removeHash(hash)
+                await ImageHashStore.shared.remove(fingerprint)
             }
         }
     }
