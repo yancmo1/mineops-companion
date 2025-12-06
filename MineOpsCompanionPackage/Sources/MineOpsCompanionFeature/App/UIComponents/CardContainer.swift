@@ -3,10 +3,12 @@ import SwiftUI
 /// Rounded neon-style container used to frame grouped content.
 public struct CardContainer<Content: View>: View {
     private let title: String?
+    private let titleColor: Color
     private let content: Content
 
-    public init(title: String? = nil, @ViewBuilder content: () -> Content) {
+    public init(title: String? = nil, titleColor: Color = .accentCyan, @ViewBuilder content: () -> Content) {
         self.title = title
+        self.titleColor = titleColor
         self.content = content()
     }
 
@@ -15,6 +17,7 @@ public struct CardContainer<Content: View>: View {
             if let title {
                 Text(title)
                     .mineOpsCardTitle()
+                    .foregroundStyle(titleColor)
                     .padding(.bottom, 4)
             }
             content

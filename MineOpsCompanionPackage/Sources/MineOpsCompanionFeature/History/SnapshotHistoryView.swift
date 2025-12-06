@@ -18,7 +18,7 @@ public struct SnapshotHistoryView: View {
             .mineOpsCardTitle()
           Text("Snapshots are created each time you import screenshots")
             .mineOpsCaption()
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.white.opacity(0.7))
             .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -103,7 +103,7 @@ private struct SnapshotCard: View {
         
         Text("\(snapshot.totalManagers) managers")
           .mineOpsBody()
-          .foregroundStyle(.secondary)
+          .foregroundStyle(.white.opacity(0.7))
         
         if !snapshot.byRarity.isEmpty {
           Divider()
@@ -121,7 +121,7 @@ private struct SnapshotCard: View {
               Spacer()
               Text("\(count)")
                 .mineOpsBody()
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.7))
             }
           }
         }
@@ -142,7 +142,7 @@ private struct SnapshotCard: View {
               Spacer()
               Text("\(count)")
                 .mineOpsBody()
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.7))
             }
           }
         }

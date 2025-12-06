@@ -1,243 +1,185 @@
-import Foundation
-import UIKit
+// # File: Sources/MineOpsCompanionPackage/Sources/MineOpsCompanionFeature/Strategy/AIStrategyEngine.swift
 
-@MainActor
-final class AIStrategyEngine: ObservableObject {
+import Foundation
+
+// struct StrategyResponse: Codable, Identifiable {
+//     var id = UUID()
+//     var comboName: String
+//     var recommendedManagers: [String]
+//     var strategySummary: String
+//     var estimatedMultiplier: Double?
+//     var detailedPlan: String?
+
+//     enum CodingKeys: String, CodingKey {
+//         case comboName, recommendedManagers, strategySummary, estimatedMultiplier, detailedPlan
+//     }
+// }
+
+actor AIStrategyEngine {
     enum StrategyError: LocalizedError {
         case missingAPIKey
         case invalidResponse
+        case apiError(String)
 
         var errorDescription: String? {
             switch self {
             case .missingAPIKey: return "OPENAI_API_KEY not found in environment variables."
             case .invalidResponse: return "Unable to decode strategy response."
+            case .apiError(let message): return message
             }
         }
     }
 
     static let shared = AIStrategyEngine()
 
-    @Published private(set) var lastResult: StrategyResponse?
-    @Published private(set) var isLoading = false
+    private let endpoint: URL = URL(string: "https://api.openai.com/v1/responses")!
+    private let model = "gpt-4o-mini"
+    private let maxRetries = 3
+    private var cache: [String: StrategyResponse] = [:]
+    private let session: URLSession
 
-    private init() {}
+    private init() {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 60
+        session = URLSession(configuration: configuration)
+    }
 
-    @discardableResult
-    func generateStrategy(
-        mineName: String,
-        mineLevel: Int,
-        shaftLevel: Int,
-        selectedManagers: [String],
-        screenshots: [UIImage],
-        notes: String?
-    ) async throws -> StrategyResponse {
+    func fetchStrategy(prompt: String) async throws -> StrategyResponse {
+        if let cached = cache[prompt] {
+            print("🧩 Cache hit for strategy prompt")
+            return cached
+        }
+
         guard let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"], !apiKey.isEmpty else {
             throw StrategyError.missingAPIKey
         }
 
-        isLoading = true
-        defer { isLoading = false }
-
-        let prompt = Self.buildPrompt(
-            mineName: mineName,
-            mineLevel: mineLevel,
-            shaftLevel: shaftLevel,
-            managers: selectedManagers,
-            notes: notes
-        )
-
-        let content = Self.buildContent(prompt: prompt, screenshots: screenshots)
-        let payload = OpenAIRequest(model: "gpt-5", input: [content], responseFormat: .json)
-
-        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/responses")!)
+        var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(payload)
+        request.httpBody = try Self.encodePayload(prompt: prompt, model: model)
 
-        let session = URLSession(configuration: .ephemeral)
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
-            throw StrategyError.invalidResponse
-        }
-
-        let strategy = try Self.decodeStrategy(from: data, fallbackManagers: selectedManagers)
-        lastResult = strategy
+        let strategy = try await perform(request: request, attempt: 1)
+        cache[prompt] = strategy
         return strategy
     }
 
-    private static func buildPrompt(
-        mineName: String,
-        mineLevel: Int,
-        shaftLevel: Int,
-        managers: [String],
-        notes: String?
-    ) -> String {
-        let roster = managers.joined(separator: ", ")
-        let message = notes?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return """
-        You are an Idle Miner Tycoon strategist.
-        Mine: \(mineName)
-        Mine Level: \(mineLevel)
-        Shaft Level: \(shaftLevel)
-        Available Managers: \(roster.isEmpty ? "None provided" : roster)
-        Notes: \(message?.isEmpty == false ? message! : "None")
-        Recommend the best combination using the provided data.
-        Respond with JSON matching the schema:
-        {"comboName": String, "recommendedManagers": [String], "strategySummary": String, "estimatedMultiplier": Double?}
-        """
-    }
+    func clearCache() { cache.removeAll() }
 
-    private static func buildContent(prompt: String, screenshots: [UIImage]) -> OpenAIMessage {
-        var parts: [OpenAIContent] = [.text(prompt)]
-        for image in screenshots {
-            guard let data = image.pngData() else { continue }
-            let base64 = data.base64EncodedString()
-            parts.append(.imageData(base64))
-        }
-        return OpenAIMessage(role: "user", content: parts)
-    }
-
-    private static func decodeStrategy(from data: Data, fallbackManagers: [String]) throws -> StrategyResponse {
-        if let jsonString = extractPrimaryText(from: data) {
-            if let jsonData = jsonString.data(using: .utf8),
-               let decoded = try? JSONDecoder().decode(StrategyResponse.self, from: jsonData) {
-                return decoded
+    private func perform(request: URLRequest, attempt: Int) async throws -> StrategyResponse {
+        do {
+            let (data, response) = try await session.data(for: request)
+            if let raw = String(data: data, encoding: .utf8) {
+                print("🧠 RAW GPT RESPONSE:\n\(raw)")
             }
-            // Fallback: treat returned text as a narrative summary when JSON decoding fails.
-            return StrategyResponse(
-                comboName: "AI Strategy",
-                recommendedManagers: fallbackManagers,
-                strategySummary: jsonString,
-                estimatedMultiplier: nil
-            )
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw StrategyError.invalidResponse
+            }
+
+            guard (200..<300).contains(httpResponse.statusCode) else {
+                if attempt < maxRetries, Self.shouldRetry(statusCode: httpResponse.statusCode) {
+                    print("⚠️ Retry #\(attempt) for HTTP \(httpResponse.statusCode)")
+                    try await Self.waitBeforeRetry(attempt: attempt)
+                    return try await perform(request: request, attempt: attempt + 1)
+                }
+
+                if let message = try? decodeAPIError(from: data) {
+                    throw StrategyError.apiError(message)
+                }
+                throw StrategyError.invalidResponse
+            }
+
+            do {
+                return try Self.decodeStrategy(from: data)
+            } catch {
+                if attempt < maxRetries {
+                    print("⚠️ Retry #\(attempt) decode failure: \(error.localizedDescription)")
+                    try await Self.waitBeforeRetry(attempt: attempt)
+                    return try await perform(request: request, attempt: attempt + 1)
+                }
+                throw error
+            }
+        } catch {
+            if attempt < maxRetries, Self.shouldRetry(error: error) {
+                print("⚠️ Retry #\(attempt) network: \(error.localizedDescription)")
+                try await Self.waitBeforeRetry(attempt: attempt)
+                return try await perform(request: request, attempt: attempt + 1)
+            }
+            throw error
         }
+    }
+
+    private static func encodePayload(prompt: String, model: String) throws -> Data {
+        let payload = ResponsesPayloadBuilder.strategy(model: model, prompt: prompt)
+        return try JSONSerialization.data(withJSONObject: payload)
+    }
+
+    private static func decodeStrategy(from data: Data) throws -> StrategyResponse {
+        let decoder = JSONDecoder()
+
+        // ✅ Direct decode (if the response is pure JSON)
+        if let direct = try? decoder.decode(StrategyResponse.self, from: data) {
+            print("✅ Strategy decode (direct):", direct)
+            return direct
+        }
+
+        // ✅ Proper nested decode for /v1/responses
+        if let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let output = root["output"] as? [[String: Any]],
+           let content = output.first?["content"] as? [[String: Any]],
+           let text = content.first?["text"] as? String {
+
+            let jsonData = Data(text.utf8)
+            let decoded = try decoder.decode(StrategyResponse.self, from: jsonData)
+            print("✅ Strategy decode (nested-text):", decoded)
+            return decoded
+        }
+
+        // ✅ Legacy fallbacks
+        if let envelope = try? decoder.decode(ResponsesEnvelope.self, from: data),
+           let text = envelope.firstText?.trimmingCharacters(in: .whitespacesAndNewlines),
+           let jsonData = text.data(using: .utf8),
+           let decoded = try? decoder.decode(StrategyResponse.self, from: jsonData) {
+            print("✅ Strategy decode (envelope):", decoded)
+            return decoded
+        }
+
         throw StrategyError.invalidResponse
     }
-}
 
-// MARK: - OpenAI payloads
-
-private struct OpenAIRequest: Encodable {
-    enum ResponseFormat: String, Encodable {
-        case json
+    private static func shouldRetry(statusCode: Int) -> Bool {
+        statusCode == 429 || (500..<600).contains(statusCode)
     }
 
-    let model: String
-    let input: [OpenAIMessage]
-    let responseFormat: ResponseFormat
-
-    enum CodingKeys: String, CodingKey {
-        case model
-        case input
-        case responseFormat = "response_format"
-    }
-}
-
-private struct OpenAIMessage: Encodable {
-    let role: String
-    let content: [OpenAIContent]
-}
-
-private enum OpenAIContent: Encodable {
-    case text(String)
-    case imageData(String)
-
-    private enum CodingKeys: String, CodingKey {
-        case type
-        case text
-        case imageData = "image_data"
+    private static func shouldRetry(error: Error) -> Bool {
+        guard let urlError = error as? URLError else { return false }
+        return [
+            URLError.timedOut, .cannotFindHost, .cannotConnectToHost,
+            .networkConnectionLost, .dnsLookupFailed, .notConnectedToInternet
+        ].contains(urlError.code)
     }
 
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        switch self {
-        case .text(let value):
-            try container.encode("input_text", forKey: .type)
-            try container.encode(value, forKey: .text)
-        case .imageData(let value):
-            try container.encode("input_image", forKey: .type)
-            try container.encode(value, forKey: .imageData)
-        }
-    }
-}
-
-private struct OpenAIResponse: Decodable {
-    struct Output: Decodable {
-        struct ContentPart: Decodable {
-            let type: String
-            let text: String?
-        }
-
-        let content: [ContentPart]
+    private static func waitBeforeRetry(attempt: Int) async throws {
+        try await Task.sleep(nanoseconds: UInt64(Double(attempt) * 1_000_000_000))
     }
 
-    let output: [Output]?
-    let outputText: [String]?
-}
-
-private struct OpenAIChoiceResponse: Decodable {
-    struct Choice: Decodable {
-        struct Message: Decodable {
-            struct ContentPart: Decodable {
-                let type: String?
-                let text: String?
-            }
-
-            let content: [ContentPart]
+    private func decodeAPIError(from data: Data) -> String? {
+        if let envelope = try? JSONDecoder().decode(OpenAIErrorEnvelope.self, from: data) {
+            return envelope.error.message
         }
-
-        let message: Message
+        if let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let message = root["message"] as? String {
+            return message
+        }
+        return nil
     }
 
-    let choices: [Choice]?
-}
-
-private func extractPrimaryText(from data: Data) -> String? {
-    let decoder = JSONDecoder()
-    decoder.keyDecodingStrategy = .convertFromSnakeCase
-
-    if let response = try? decoder.decode(OpenAIResponse.self, from: data) {
-        if let text = response.output?.first?.content.first(where: { $0.text != nil })?.text {
-            return text.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        if let fallback = response.outputText?.first {
-            return fallback.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
+#if DEBUG
+    static func debugPayload(prompt: String, model: String = "gpt-4o-mini") -> [String: Any] {
+        ResponsesPayloadBuilder.strategy(model: model, prompt: prompt)
     }
-
-    if let choiceResponse = try? decoder.decode(OpenAIChoiceResponse.self, from: data) {
-        if let text = choiceResponse.choices?.first?.message.content.first(where: { $0.text != nil })?.text {
-            return text.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-    }
-
-    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-        if let direct = json["output_text"] as? [String], let text = direct.first {
-            return text.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        if let choices = json["choices"] as? [[String: Any]],
-           let message = choices.first?["message"] as? [String: Any] {
-            if let content = message["content"] as? [[String: Any]] {
-                for item in content {
-                    if let text = item["text"] as? String {
-                        return text.trimmingCharacters(in: .whitespacesAndNewlines)
-                    }
-                }
-            }
-            if let text = message["content"] as? String {
-                return text.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-        }
-        if let content = json["content"] as? [[String: Any]] {
-            for item in content {
-                if let text = item["text"] as? String {
-                    return text.trimmingCharacters(in: .whitespacesAndNewlines)
-                }
-            }
-        }
-    }
-
-    return nil
+#endif
 }

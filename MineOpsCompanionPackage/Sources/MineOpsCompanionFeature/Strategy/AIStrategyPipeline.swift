@@ -14,16 +14,14 @@ final class AIStrategyPipeline: ObservableObject {
     @Published private(set) var lastError: String?
 
     private let context: NSManagedObjectContext
-    private let visionModelName = "gpt-5-vision-preview"
+    private let visionModelName = "gpt-4o-mini"
 
     private init() {
         context = CoreDataManager.shared.container.viewContext
     }
 
     func runFullPipeline(
-        mineName: String,
-        mineLevel: Int,
-        shaftLevel: Int,
+        mineContext: MineContext,
         screenshots: [UIImage],
         notes: String?,
         selectedManagers: [String]
@@ -32,12 +30,20 @@ final class AIStrategyPipeline: ObservableObject {
         lastError = nil
         defer { isAnalyzing = false }
 
-        if let cached = fetchCachedStrategy(mineName: mineName, mineLevel: mineLevel, shaftLevel: shaftLevel) {
+        if let cached = fetchCachedStrategy(cacheKey: mineContext.cacheKey) {
             detectedManagers = cached.detectedManagers ?? []
-            if let raw = cached.strategyJSON?.data(using: .utf8) {
-                lastStrategy = try? JSONDecoder().decode(StrategyResponse.self, from: raw)
+
+            if
+                let raw = cached.strategyJSON?.data(using: .utf8),
+                let decoded = try? JSONDecoder().decode(StrategyResponse.self, from: raw)
+            {
+                lastStrategy = decoded
+                return
             }
-            return
+
+            // Cached entry exists but is missing or has invalid JSON; purge and continue.
+            context.delete(cached)
+            CoreDataManager.shared.saveContext()
         }
 
         var roster = selectedManagers
@@ -57,19 +63,33 @@ final class AIStrategyPipeline: ObservableObject {
         }
 
         do {
-            let strategy = try await AIStrategyEngine.shared.generateStrategy(
-                mineName: mineName,
-                mineLevel: mineLevel,
-                shaftLevel: shaftLevel,
-                selectedManagers: roster,
-                screenshots: screenshots,
-                notes: notes
+            let directory = (try? SMDirectory.load()) ?? []
+            let managerRoster = roster.map { name -> ManagerRosterEntry in
+                // Try to find department from directory by name or alias
+                let lowercaseName = name.lowercased()
+                if let entry = directory.first(where: { entry in
+                    entry.name.lowercased() == lowercaseName || 
+                    (entry.aliases?.contains(where: { $0.lowercased() == lowercaseName }) ?? false)
+                }) {
+                    return ManagerRosterEntry(name: entry.name, department: entry.department.capitalized)
+                } else {
+                    // Unknown manager - mark as unknown so AI doesn't make wrong assumptions
+                    print("⚠️ Unknown manager '\(name)' - marking department as unknown")
+                    return ManagerRosterEntry(name: name, department: "Unknown")
+                }
+            }
+            
+            let promptModel = StrategyPrompt(
+                mineContext: mineContext,
+                managerRoster: managerRoster,
+                goal: notes ?? "Optimize production for \(mineContext.promptDescription)"
             )
+
+            let strategy = try await AIStrategyEngine.shared.fetchStrategy(prompt: promptModel.text)
             storeStrategy(
-                mineName: mineName,
-                mineLevel: mineLevel,
-                shaftLevel: shaftLevel,
-                managers: detectedManagers,
+                cacheKey: mineContext.cacheKey,
+                mineContext: mineContext,
+                managers: strategy.recommendedManagers,
                 strategy: strategy
             )
             lastStrategy = strategy
@@ -88,6 +108,9 @@ final class AIStrategyPipeline: ObservableObject {
         CoreDataManager.shared.saveContext()
         detectedManagers = []
         lastStrategy = nil
+        Task {
+            await AIStrategyEngine.shared.clearCache()
+        }
     }
 
     // MARK: - Detection
@@ -118,62 +141,78 @@ final class AIStrategyPipeline: ObservableObject {
         }
 
         let base64 = imageData.base64EncodedString()
-        let message = OpenAIMessage(role: "user", content: [
-            .text("Identify the Idle Miner Tycoon manager shown. Respond as JSON: {\"manager\": \"<name>\"}"),
-            .imageData(base64)
-        ])
-        let payload = OpenAIRequest(model: visionModelName, input: [message], responseFormat: .json)
+        let prompt = "Identify the Idle Miner Tycoon manager shown."
+        let payload = ResponsesPayloadBuilder.managerDetection(
+            model: visionModelName,
+            prompt: prompt,
+            base64Image: base64
+        )
 
-        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/responses")!)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(payload)
+        let data = try await performResponsesRequest(payload: payload, apiKey: apiKey)
 
-        let session = URLSession(configuration: .ephemeral)
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
-            throw AIStrategyEngine.StrategyError.invalidResponse
+        struct ResponsesAPIResponse: Decodable {
+            struct Output: Decodable {
+                struct Content: Decodable { let text: String? }
+                let content: [Content]
+            }
+            let output: [Output]
         }
 
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let openAI = try decoder.decode(OpenAIResponse.self, from: data)
-        guard let raw = openAI.output.first?.content.first?.text,
-              let jsonData = raw.data(using: .utf8) else {
-            return nil
-        }
+        guard let responsesAPI = try? JSONDecoder().decode(ResponsesAPIResponse.self, from: data),
+              let jsonText = responsesAPI.output.first?.content.first?.text,
+              let jsonData = jsonText.data(using: .utf8) else { return nil }
+
         struct Simple: Decodable { let manager: String }
         return try? JSONDecoder().decode(Simple.self, from: jsonData).manager
     }
 
+    private func performResponsesRequest(payload: [String: Any], apiKey: String) async throws -> Data {
+        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/responses")!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+
+        let session = URLSession(configuration: .ephemeral)
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AIStrategyEngine.StrategyError.invalidResponse
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            if let message = try? JSONDecoder().decode(OpenAIErrorEnvelope.self, from: data).error.message {
+                throw AIStrategyEngine.StrategyError.apiError(message)
+            }
+            throw AIStrategyEngine.StrategyError.invalidResponse
+        }
+
+        return data
+    }
+
     // MARK: - Core Data helpers
 
-    private func fetchCachedStrategy(mineName: String, mineLevel: Int, shaftLevel: Int) -> CachedStrategyEntity? {
+    private func fetchCachedStrategy(cacheKey: String) -> CachedStrategyEntity? {
         let request = NSFetchRequest<CachedStrategyEntity>(entityName: "CachedStrategy")
         request.fetchLimit = 1
-        request.predicate = NSPredicate(
-            format: "mineName ==[c] %@ AND mineLevel == %d AND shaftLevel == %d",
-            mineName,
-            mineLevel,
-            shaftLevel
-        )
+        request.predicate = NSPredicate(format: "cacheKey == %@", cacheKey)
         return try? context.fetch(request).first
     }
 
     private func storeStrategy(
-        mineName: String,
-        mineLevel: Int,
-        shaftLevel: Int,
+        cacheKey: String,
+        mineContext: MineContext,
         managers: [String],
         strategy: StrategyResponse
     ) {
         let entity = CachedStrategyEntity(context: context)
-        entity.mineName = mineName
-        entity.mineLevel = Int64(mineLevel)
-        entity.shaftLevel = Int64(shaftLevel)
+        entity.cacheKey = cacheKey
+        entity.mineName = mineContext.displayName
+        entity.mineLevel = Int64(mineContext.prestige)
+        entity.shaftLevel = Int64(mineContext.maxShaft)
         entity.detectedManagers = managers
+        entity.comboName = strategy.comboName
+        entity.detailedPlan = strategy.detailedPlan
         if let data = try? JSONEncoder().encode(strategy) {
             entity.strategyJSON = String(data: data, encoding: .utf8)
         } else {
@@ -201,63 +240,4 @@ final class AIStrategyPipeline: ObservableObject {
     private static func hash(_ data: Data) -> String {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
-}
-
-// MARK: - Shared OpenAI models
-
-private struct OpenAIRequest: Encodable {
-    enum ResponseFormat: String, Encodable {
-        case json
-    }
-
-    let model: String
-    let input: [OpenAIMessage]
-    let responseFormat: ResponseFormat
-
-    enum CodingKeys: String, CodingKey {
-        case model
-        case input
-        case responseFormat = "response_format"
-    }
-}
-
-private struct OpenAIMessage: Encodable {
-    let role: String
-    let content: [OpenAIContent]
-}
-
-private enum OpenAIContent: Encodable {
-    case text(String)
-    case imageData(String)
-
-    private enum CodingKeys: String, CodingKey {
-        case type
-        case text
-        case imageData = "image_data"
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        switch self {
-        case .text(let value):
-            try container.encode("input_text", forKey: .type)
-            try container.encode(value, forKey: .text)
-        case .imageData(let value):
-            try container.encode("input_image", forKey: .type)
-            try container.encode(value, forKey: .imageData)
-        }
-    }
-}
-
-private struct OpenAIResponse: Decodable {
-    struct Output: Decodable {
-        struct ContentPart: Decodable {
-            let type: String
-            let text: String?
-        }
-
-        let content: [ContentPart]
-    }
-
-    let output: [Output]
 }

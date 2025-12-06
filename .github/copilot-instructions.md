@@ -12,3 +12,4 @@
 - Always provide accessibility labels and identifiers for UI elements.
 - Never log sensitive information or use insecure network calls.
 - For full style, architecture, and workflow details, refer to the project documentation in [`template/.cursor/rules/`](../.cursor/rules/).
+- On ios swift apps, you should alway run a build and test using simultor Yancy's Phone Sim D3B97618-A8E6-4594-9F2B-C80DA9A0650C to make sure there are no build issues. 

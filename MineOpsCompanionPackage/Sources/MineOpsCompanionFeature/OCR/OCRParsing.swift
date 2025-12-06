@@ -116,6 +116,44 @@ public enum DirectoryMatcher {
 }
 
 public enum OCRTextHeuristics {
+  /// Common UI elements and game labels that should NOT be treated as manager names
+  private static let uiBlacklist: Set<String> = [
+    // Button labels
+    "done", "cancel", "ok", "close", "back", "next", "confirm", "skip",
+    "level up", "promote", "rank up", "upgrade", "collect", "claim",
+    // Game UI elements
+    "super manager", "super managers", "supermanager", "supermanagers",
+    "promotion", "snapshot", "overview", "details", "info", "stats",
+    "active", "passive", "ability", "abilities", "effect", "effects",
+    "duration", "cooldown", "boost", "boosts", "multiplier",
+    "readiness", "ready", "available", "unavailable", "locked", "unlocked",
+    // Common misreads
+    "pharmacy", "x reels", "reels", "reel",
+    "loading", "processing", "analyzing",
+    // Percentage and number patterns
+    "mine", "mineshaft", "elevator", "warehouse", "transport",
+    // Rarity labels
+    "common", "rare", "epic", "legendary", "mythic"
+  ]
+
+  /// Additional patterns that indicate this line is NOT a manager name
+  private static let blacklistPatterns: [NSRegularExpression] = {
+    let patterns = [
+      #"^\d+$"#,                          // Just numbers
+      #"^\d+\s*[x%]"#,                    // Multipliers like "5x" or "500%"
+      #"^[x%]\s*\d+"#,                    // Reversed like "x5"
+      #"^\d+\s*(m|min|s|sec|h|hr)"#,      // Duration like "5m" or "30s"
+      #"^level\s*\d+"#,                   // "Level 15"
+      #"^lv\s*\d+"#,                      // "Lv 15"
+      #"^\d+\s*/\s*\d+"#,                 // "14/50" fraction
+      #"^[+\-]\s*\d+"#,                   // "+50%" or "-10%"
+      #"^[\⭐★✦✪]+"#,                     // Star characters
+      #"^\$"#,                            // Dollar amounts
+      #"^[A-Z]$"#                         // Single uppercase letter (close buttons)
+    ]
+    return patterns.compactMap { try? NSRegularExpression(pattern: $0, options: .caseInsensitive) }
+  }()
+
   public static func guessDisplayName(from text: String) -> String {
     let lines = text
       .split(separator: "\n")
@@ -124,25 +162,57 @@ public enum OCRTextHeuristics {
 
     guard !lines.isEmpty else { return "Unknown" }
 
-    let keywords = ["super manager", "promotion", "level", "snapshot", "overview", "%", "boost", "readiness"]
-    let singleCharBlacklist = ["x", "X"]
-
+    // Find the best candidate line that looks like a manager name
     if let candidate = lines.first(where: { line in
-      let lower = line.lowercased()
-      if line.count < 2 { return false } // Filter single characters
-      if singleCharBlacklist.contains(line) { return false } // Filter X close button
-      if keywords.contains(where: { lower.contains($0) }) { return false }
-      if line.rangeOfCharacter(from: .decimalDigits) != nil { return false }
-      return lower.rangeOfCharacter(from: .letters) != nil
+      isValidManagerName(line)
     }) {
       return candidate
     }
 
-    if let longestByLetters = lines.max(by: { letterCount(in: $0) < letterCount(in: $1) }) {
+    // Fallback: find line with most letters that isn't blacklisted
+    if let longestByLetters = lines
+      .filter({ !isBlacklisted($0) })
+      .max(by: { letterCount(in: $0) < letterCount(in: $1) }) {
       return longestByLetters
     }
 
     return lines.first ?? "Unknown"
+  }
+
+  /// Check if a string could be a valid manager name
+  private static func isValidManagerName(_ line: String) -> Bool {
+    // Too short
+    if line.count < 2 { return false }
+    
+    // Single character or just X (close button)
+    if line.count == 1 || line.uppercased() == "X" { return false }
+    
+    // Check against blacklist
+    if isBlacklisted(line) { return false }
+    
+    // Check against regex patterns
+    let range = NSRange(line.startIndex..<line.endIndex, in: line)
+    for pattern in blacklistPatterns {
+      if pattern.firstMatch(in: line, range: range) != nil {
+        return false
+      }
+    }
+    
+    // Contains digits without letters (pure number)
+    let hasLetters = line.unicodeScalars.contains { CharacterSet.letters.contains($0) }
+    let hasDigits = line.rangeOfCharacter(from: .decimalDigits) != nil
+    
+    // Names with digits are okay if they have letters (like H4V0C)
+    // But pure numbers or percentage text is not a name
+    if hasDigits && !hasLetters { return false }
+    
+    // At least some letters present
+    return hasLetters
+  }
+  
+  private static func isBlacklisted(_ line: String) -> Bool {
+    let normalized = line.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+    return uiBlacklist.contains(normalized)
   }
 
   private static func letterCount(in string: String) -> Int {

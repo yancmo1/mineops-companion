@@ -21,6 +21,7 @@ public final class ScreenshotsFetcher: NSObject, @unchecked Sendable, PHPhotoLib
     }
   }
   private let processedIDsKey = "com.mineops.processedScreenshotIDs"
+  private let lastImportDateKey = "com.mineops.lastImportDate"
   
   public var onNewScreenshot: (@Sendable (UIImage) -> Void)?
   
@@ -37,6 +38,12 @@ public final class ScreenshotsFetcher: NSObject, @unchecked Sendable, PHPhotoLib
   /// Requests photo library authorization.
   public func requestAuthorization() async -> PHAuthorizationStatus {
     await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+  }
+  
+  /// The date of the last successful import, used to filter older screenshots
+  public var lastImportDate: Date? {
+    get { UserDefaults.standard.object(forKey: lastImportDateKey) as? Date }
+    set { UserDefaults.standard.set(newValue, forKey: lastImportDateKey) }
   }
   
   /// Fetches the most recent screenshot.
@@ -64,8 +71,13 @@ public final class ScreenshotsFetcher: NSObject, @unchecked Sendable, PHPhotoLib
     return await loadImage(from: asset)
   }
   
-  /// Fetches recent screenshots (up to limit). Does NOT filter by processed status - that's handled by image hash deduplication.
-  public func fetchUnprocessedScreenshots(limit: Int = 10) async -> [UIImage] {
+  /// Fetches new screenshots that haven't been processed yet.
+  /// Uses asset identifiers to track what's been seen.
+  /// - Parameters:
+  ///   - limit: Maximum number of screenshots to fetch
+  ///   - onlyNewSinceLastImport: If true, only fetch screenshots taken after the last import date
+  /// - Returns: Array of (image, assetIdentifier) tuples for new screenshots
+  public func fetchNewScreenshots(limit: Int = 100, onlyNewSinceLastImport: Bool = true) async -> [(image: UIImage, assetId: String)] {
     guard PHPhotoLibrary.authorizationStatus(for: .readWrite) == .authorized else {
       return []
     }
@@ -74,26 +86,64 @@ public final class ScreenshotsFetcher: NSObject, @unchecked Sendable, PHPhotoLib
     
     let fetchOptions = PHFetchOptions()
     fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-    fetchOptions.fetchLimit = limit
+    
+    // Filter by date if we have a last import date and onlyNewSinceLastImport is true
+    if onlyNewSinceLastImport, let lastDate = lastImportDate {
+      fetchOptions.predicate = NSPredicate(format: "creationDate > %@", lastDate as NSDate)
+      print("📅 Filtering screenshots newer than: \(lastDate)")
+    }
     
     let assets = PHAsset.fetchAssets(in: collection, options: fetchOptions)
-    var images: [UIImage] = []
+    var results: [(image: UIImage, assetId: String)] = []
+    var checkedCount = 0
+    
+    print("📸 Found \(assets.count) screenshots to check")
     
     for index in 0..<assets.count {
+      guard results.count < limit else { break }
+      
       let asset = assets[index]
+      checkedCount += 1
+      
+      // Skip already processed screenshots
+      if processedIdentifiers.contains(asset.localIdentifier) {
+        print("⏭️ Already processed: \(asset.localIdentifier.prefix(8))...")
+        continue
+      }
       
       if let image = await loadImage(from: asset) {
-        images.append(image)
+        results.append((image, asset.localIdentifier))
       }
     }
     
-    return images
+    print("📊 Checked \(checkedCount) screenshots, found \(results.count) new ones")
+    return results
+  }
+  
+  /// Legacy method - fetches recent screenshots without tracking.
+  /// Prefer fetchNewScreenshots() for the import workflow.
+  public func fetchUnprocessedScreenshots(limit: Int = 10) async -> [UIImage] {
+    let results = await fetchNewScreenshots(limit: limit, onlyNewSinceLastImport: false)
+    return results.map(\.image)
   }
   
   /// Marks a screenshot as processed to avoid reprocessing.
   public func markAsProcessed(_ identifier: String) {
     processedIdentifiers.insert(identifier)
     persistProcessedIdentifiers()
+  }
+  
+  /// Marks multiple screenshots as processed.
+  public func markAsProcessed(_ identifiers: [String]) {
+    for id in identifiers {
+      processedIdentifiers.insert(id)
+    }
+    persistProcessedIdentifiers()
+  }
+  
+  /// Records the current date as the last import date.
+  public func recordImportDate() {
+    lastImportDate = Date()
   }
   
   /// Clears all processed identifiers (for testing/reset).

@@ -1,0 +1,126 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-11-03",
+  "icons": [
+    {
+      "id": "barrier_unlock_cost",
+      "displayName": "Barrier Unlock Cost",
+      "description": "Reduces the cash or resources needed to unlock barriers between mine shafts.",
+      "iconUnlocked": "barrier_unlock_cost.png",
+      "iconLocked": "barrier_unlock_cost_locked.png",
+      "boostCategory": "Cost Reduction"
+    },
+    {
+      "id": "beam_resources_to_warehouse",
+      "displayName": "Beam Resources to Warehouse",
+      "description": "Instantly transfers a percentage of mined resources to the warehouse.",
+      "iconUnlocked": "beam_to_warehouse.png",
+      "iconLocked": "beam_to_warehouse_locked.png",
+      "boostCategory": "Transport"
+    },
+    {
+      "id": "continent_income_boost",
+      "displayName": "Continent Income",
+      "description": "Increases overall income from the entire continent.",
+      "iconUnlocked": "continent_income.png",
+      "iconLocked": "continent_income_locked.png",
+      "boostCategory": "Income"
+    },
+    {
+      "id": "elevator_upgrade_cost",
+      "displayName": "Elevator Upgrade Cost",
+      "description": "Reduces cost for upgrading elevator speed and capacity.",
+      "iconUnlocked": "elevator_upgrade_cost.png",
+      "iconLocked": "elevator_upgrade_cost_locked.png",
+      "boostCategory": "Cost Reduction"
+    },
+    {
+      "id": "idle_cash_boost",
+      "displayName": "Idle Cash",
+      "description": "Increases cash earned while offline or idle.",
+      "iconUnlocked": "idle_cash_boost.png",
+      "iconLocked": "idle_cash_boost_locked.png",
+      "boostCategory": "Income"
+    },
+    {
+      "id": "loading_movement_speed_boost",
+      "displayName": "Loading & Movement Speed",
+      "description": "Boosts elevator loading and worker movement speed.",
+      "iconUnlocked": "loading_speed.png",
+      "iconLocked": "loading_speed_locked.png",
+      "boostCategory": "Speed"
+    },
+    {
+      "id": "mine_income_boost",
+      "displayName": "Mine Income Factor",
+      "description": "Increases the mine’s production multiplier for all shafts.",
+      "iconUnlocked": "mine_income_boost.png",
+      "iconLocked": "mine_income_boost_locked.png",
+      "boostCategory": "Income"
+    },
+    {
+      "id": "mineshaft_unlock_cost_reduced",
+      "displayName": "Mine Shaft Unlock Cost",
+      "description": "Reduces the cost to unlock new mine shafts.",
+      "iconUnlocked": "mineshaft_unlock_cost.png",
+      "iconLocked": "mineshaft_unlock_cost_locked.png",
+      "boostCategory": "Cost Reduction"
+    },
+    {
+      "id": "mining_speed_boost",
+      "displayName": "Mining Speed",
+      "description": "Increases mining speed for workers in mine shafts.",
+      "iconUnlocked": "mining_speed_boost.png",
+      "iconLocked": "mining_speed_boost_locked.png",
+      "boostCategory": "Speed"
+    },
+    {
+      "id": "mining_walking_speed_boost",
+      "displayName": "Mining & Walking Speed",
+      "description": "Increases both mining and worker walking speed.",
+      "iconUnlocked": "mining_walking_speed.png",
+      "iconLocked": "mining_walking_speed_locked.png",
+      "boostCategory": "Speed"
+    },
+    {
+      "id": "movement_speed_boost",
+      "displayName": "Movement Speed",
+      "description": "Boosts the base movement speed of all workers in this area.",
+      "iconUnlocked": "movement_speed_boost.png",
+      "iconLocked": "movement_speed_boost_locked.png",
+      "boostCategory": "Speed"
+    },
+    {
+      "id": "upgrade_cost_reduced",
+      "displayName": "Upgrade Cost Reduction",
+      "description": "Reduces upgrade costs across affected areas (shaft, warehouse, or elevator).",
+      "iconUnlocked": "upgrade_cost.png",
+      "iconLocked": "upgrade_cost_locked.png",
+      "boostCategory": "Cost Reduction"
+    },
+    {
+      "id": "warehouse_speed_boost",
+      "displayName": "Warehouse Speed",
+      "description": "Increases warehouse loading and walking speed for workers.",
+      "iconUnlocked": "warehouse_speed.png",
+      "iconLocked": "warehouse_speed_locked.png",
+      "boostCategory": "Speed"
+    },
+    {
+      "id": "global_income",
+      "displayName": "Global Income",
+      "description": "Increases income for all mines and continents.",
+      "iconUnlocked": "global_income.png",
+      "iconLocked": "global_income_locked.png",
+      "boostCategory": "Income"
+    },
+    {
+      "id": "global_cost_reduction",
+      "displayName": "Global Cost Reduction",
+      "description": "Reduces costs globally across all upgrade types.",
+      "iconUnlocked": "global_cost.png",
+      "iconLocked": "global_cost_locked.png",
+      "boostCategory": "Cost Reduction"
+    }
+  ]
+}

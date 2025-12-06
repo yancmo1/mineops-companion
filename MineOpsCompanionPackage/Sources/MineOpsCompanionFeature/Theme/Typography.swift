@@ -16,7 +16,7 @@ public extension View {
 
     func mineOpsCardTitle() -> some View {
         font(MineOpsFont.subheading)
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Color.accentCyan)
     }
 
     func mineOpsBody() -> some View {
@@ -26,6 +26,6 @@ public extension View {
 
     func mineOpsCaption() -> some View {
         font(MineOpsFont.caption)
-            .foregroundStyle(Color.gray)
+            .foregroundStyle(Color.white.opacity(0.6))
     }
 }

@@ -1,5 +1,6 @@
 import SwiftUI
 import MineOpsCompanionFeature
+import OSLog
 
 @main
 struct MineOpsCompanionApp: App {
@@ -10,6 +11,7 @@ struct MineOpsCompanionApp: App {
         #if DEBUG
         clearAllDataForTesting()
         #endif
+        IconStorage.ensureDirectories()
     }
 
     var body: some Scene {
@@ -71,7 +73,7 @@ struct MineOpsCompanionApp: App {
             ImageHashStore.shared.clearAll()
         }
         
-        print("✅ Cleared all app data for testing build (Documents, App Support, UserDefaults, Hash Store)")
+        Logger.app.info("✅ Cleared all app data for testing build (Documents, App Support, UserDefaults, Hash Store)")
     }
     
     private func handleURLScheme(_ url: URL) {
@@ -92,11 +94,11 @@ struct MineOpsCompanionApp: App {
         }
         
         // Check for duplicates
-        if let hash = ImageHasher.perceptualHash(for: image) {
-            if await ImageHashStore.shared.isDuplicate(hash) {
+        if let fingerprint = ImageHasher.fingerprint(for: image) {
+            if ImageHashStore.shared.isDuplicate(fingerprint) {
                 return // Skip duplicate
             }
-            ImageHashStore.shared.addHash(hash)
+            ImageHashStore.shared.add(fingerprint)
         }
         
         // Process the screenshot through OCR
@@ -113,3 +115,4 @@ struct MineOpsCompanionApp: App {
         }
     }
 }
+

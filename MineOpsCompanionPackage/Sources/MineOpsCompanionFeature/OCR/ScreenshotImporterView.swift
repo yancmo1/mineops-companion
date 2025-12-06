@@ -8,7 +8,8 @@ struct ScreenshotImporterView: View {
     @State private var progressMessage = ""
     @State private var importedNames: [String] = []
     @State private var updatedNames: [String] = []
-    @State private var skippedCount = 0
+    @State private var skippedDuplicateCount = 0
+    @State private var skippedNonGameCount = 0
     @State private var errorMessage: String?
     
     var body: some View {
@@ -22,7 +23,7 @@ struct ScreenshotImporterView: View {
                         .mineOpsBody()
                         .multilineTextAlignment(.center)
                         .padding()
-                } else if !importedNames.isEmpty || !updatedNames.isEmpty || skippedCount > 0 {
+                } else if !importedNames.isEmpty || !updatedNames.isEmpty || skippedDuplicateCount > 0 || skippedNonGameCount > 0 {
                     VStack(spacing: 16) {
                         Text("Import Complete")
                             .mineOpsHeadingStyle()
@@ -31,7 +32,7 @@ struct ScreenshotImporterView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("New Imports:")
                                     .mineOpsBody()
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.7))
                                 
                                 ForEach(importedNames, id: \.self) { name in
                                     HStack(spacing: 8) {
@@ -52,7 +53,7 @@ struct ScreenshotImporterView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Updated:")
                                     .mineOpsBody()
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.7))
                                 
                                 ForEach(updatedNames, id: \.self) { name in
                                     HStack(spacing: 8) {
@@ -69,13 +70,26 @@ struct ScreenshotImporterView: View {
                             .clipShape(RoundedRectangle(cornerRadius: MineOpsLayout.cornerRadius))
                         }
                         
-                        if skippedCount > 0 {
-                            HStack(spacing: 8) {
-                                Image(systemName: "arrow.triangle.2.circlepath")
-                                    .foregroundStyle(.secondary)
-                                Text("\(skippedCount) duplicate\(skippedCount == 1 ? "" : "s") skipped")
-                                    .mineOpsCaption()
-                                    .foregroundStyle(.secondary)
+                        // Show skipped counts
+                        VStack(spacing: 4) {
+                            if skippedDuplicateCount > 0 {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "doc.on.doc")
+                                        .foregroundStyle(.white.opacity(0.5))
+                                    Text("\(skippedDuplicateCount) duplicate\(skippedDuplicateCount == 1 ? "" : "s") skipped")
+                                        .mineOpsCaption()
+                                        .foregroundStyle(.white.opacity(0.6))
+                                }
+                            }
+                            
+                            if skippedNonGameCount > 0 {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "photo.badge.minus")
+                                        .foregroundStyle(.white.opacity(0.5))
+                                    Text("\(skippedNonGameCount) non-game screenshot\(skippedNonGameCount == 1 ? "" : "s") skipped")
+                                        .mineOpsCaption()
+                                        .foregroundStyle(.white.opacity(0.6))
+                                }
                             }
                         }
                         
@@ -97,7 +111,7 @@ struct ScreenshotImporterView: View {
                     Text("This will scan your Screenshots album and import any new Super Manager cards that haven't been processed yet.")
                         .mineOpsBody()
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.7))
                         .padding(.horizontal)
                     
                     if let errorMessage {
@@ -138,7 +152,8 @@ struct ScreenshotImporterView: View {
         errorMessage = nil
         importedNames = []
         updatedNames = []
-        skippedCount = 0
+        skippedDuplicateCount = 0
+        skippedNonGameCount = 0
         progressMessage = "Requesting photo library access..."
         
         // Request permission
@@ -149,47 +164,68 @@ struct ScreenshotImporterView: View {
             return
         }
         
-        progressMessage = "Scanning Screenshots album..."
+        progressMessage = "Scanning for new screenshots..."
         
-        // Fetch unprocessed screenshots (limit to 100 to avoid overwhelming)
-        let images = await ScreenshotsFetcher.shared.fetchUnprocessedScreenshots(limit: 100)
+        // Fetch only new screenshots (not previously processed)
+        let screenshots = await ScreenshotsFetcher.shared.fetchNewScreenshots(limit: 100, onlyNewSinceLastImport: true)
         
-        guard !images.isEmpty else {
-            progressMessage = "No new screenshots found"
-            isProcessing = false
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                dismiss()
+        guard !screenshots.isEmpty else {
+            // If no new screenshots since last import, try without date filter
+            progressMessage = "No new screenshots since last import.\nChecking all unprocessed..."
+            let allScreenshots = await ScreenshotsFetcher.shared.fetchNewScreenshots(limit: 100, onlyNewSinceLastImport: false)
+            
+            if allScreenshots.isEmpty {
+                progressMessage = "No new screenshots found"
+                isProcessing = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    dismiss()
+                }
+                return
             }
+            
+            // Process the unfiltered results
+            await processScreenshots(allScreenshots)
             return
         }
         
-        progressMessage = "Found \(images.count) screenshot\(images.count == 1 ? "" : "s")\nChecking for duplicates..."
+        await processScreenshots(screenshots)
+    }
+    
+    @MainActor
+    private func processScreenshots(_ screenshots: [(image: UIImage, assetId: String)]) async {
+        progressMessage = "Found \(screenshots.count) new screenshot\(screenshots.count == 1 ? "" : "s")\nChecking for duplicates..."
         
         // Process each image
         let processor = OCRProcessor()
-        var processedImages: [UIImage] = []
+        var processedImages: [(image: UIImage, assetId: String, fingerprint: ImageFingerprint?)] = []
         
-        for (index, image) in images.enumerated() {
-            progressMessage = "Checking \(index + 1) of \(images.count)..."
+        for (index, screenshot) in screenshots.enumerated() {
+            progressMessage = "Checking \(index + 1) of \(screenshots.count)..."
             
-            // Check for duplicate hash
-            if let hash = ImageHasher.perceptualHash(for: image) {
-                if await ImageHashStore.shared.isDuplicate(hash) {
-                    print("⏭️ Skipping duplicate image \(index + 1) (hash: \(hash.prefix(8))...)")
-                    skippedCount += 1
+            let fingerprint = ImageHasher.fingerprint(for: screenshot.image)
+            if let fingerprint {
+                if ImageHashStore.shared.isDuplicate(fingerprint) {
+                    print("⏭️ Skipping duplicate image \(index + 1) (hash: \(fingerprint.perceptualHash.prefix(8))...)")
+                    skippedDuplicateCount += 1
+                    // Still mark as processed so we don't check it again
+                    ScreenshotsFetcher.shared.markAsProcessed(screenshot.assetId)
                     continue
                 } else {
-                    print("✅ New image \(index + 1) (hash: \(hash.prefix(8))...)")
+                    print("✅ New image \(index + 1) (hash: \(fingerprint.perceptualHash.prefix(8))...)")
                 }
+            } else {
+                print("⚠️ Could not fingerprint image \(index + 1); importing anyway")
             }
-            
-            processedImages.append(image)
+
+            processedImages.append((screenshot.image, screenshot.assetId, fingerprint))
         }
         
-        print("📊 Import summary: \(processedImages.count) new, \(skippedCount) duplicates")
+        print("📊 Import summary: \(processedImages.count) new, \(skippedDuplicateCount) duplicates")
         
         guard !processedImages.isEmpty else {
             progressMessage = "All screenshots already imported"
+            // Record import date even if all were duplicates
+            ScreenshotsFetcher.shared.recordImportDate()
             isProcessing = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 dismiss()
@@ -197,20 +233,30 @@ struct ScreenshotImporterView: View {
             return
         }
         
-        // Run OCR on all non-duplicate images
+        // Run OCR on all non-duplicate images (validator will filter non-game screenshots)
         progressMessage = "Running OCR on \(processedImages.count) image\(processedImages.count == 1 ? "" : "s")..."
-        await processor.processImages(processedImages)
+        await processor.processImages(processedImages.map(\.image))
         
-        // Add hashes AFTER successful OCR
-        for image in processedImages {
-            if let hash = ImageHasher.perceptualHash(for: image) {
-                ImageHashStore.shared.addHash(hash)
+        // Track how many were skipped by the SM card validator
+        skippedNonGameCount = processor.skippedCount
+        
+        // Mark all processed screenshots and add hashes AFTER successful OCR
+        let assetIds = processedImages.map(\.assetId)
+        ScreenshotsFetcher.shared.markAsProcessed(assetIds)
+        
+        for entry in processedImages {
+            if let fingerprint = entry.fingerprint {
+                ImageHashStore.shared.add(fingerprint)
             }
         }
         
+        // Record the import date
+        ScreenshotsFetcher.shared.recordImportDate()
+        
         // Harvest icons for training/labeling
         progressMessage = "Harvesting passive icons..."
-        for (image, result) in zip(processedImages, processor.results) {
+        for (entry, result) in zip(processedImages, processor.results) {
+            let image = entry.image
             let managerId = result.id.uuidString
             let managerName = result.directoryMatch?.name ?? result.resolvedName
             

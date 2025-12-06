@@ -11,7 +11,13 @@ public enum ResourceLoader {
   }
 
   public static func url(for name: String, ext: String? = nil, subdirectory: String? = nil) throws -> URL {
-    if let u = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: subdirectory) {
+    // Try with subdirectory first
+    if let subdirectory = subdirectory,
+       let u = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: subdirectory) {
+      return u
+    }
+    // Fallback: try without subdirectory (resources may be flattened in bundle)
+    if let u = Bundle.module.url(forResource: name, withExtension: ext) {
       return u
     }
     throw LoadError.missing([name, ext].compactMap { $0 }.joined(separator: "."))

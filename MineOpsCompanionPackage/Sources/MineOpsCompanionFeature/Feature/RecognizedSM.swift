@@ -10,7 +10,7 @@ public struct RecognizedSM: Identifiable, Hashable {
   public let resolvedName: String
   public let stats: SMStats
   public let storedImageName: String?
-  public let imageHash: String?
+  public let imageFingerprint: ImageFingerprint?
   public let rarity: String?
   public let role: String?
   public let stars: Int?
@@ -78,7 +78,7 @@ public struct RecognizedSM: Identifiable, Hashable {
     resolvedName: String,
     stats: SMStats,
     storedImageName: String? = nil,
-    imageHash: String? = nil,
+    imageFingerprint: ImageFingerprint? = nil,
     rarity: String? = nil,
     role: String? = nil,
     stars: Int? = nil,
@@ -94,7 +94,7 @@ public struct RecognizedSM: Identifiable, Hashable {
     self.resolvedName = resolvedName
     self.stats = stats
     self.storedImageName = storedImageName
-    self.imageHash = imageHash
+    self.imageFingerprint = imageFingerprint
     self.rarity = rarity
     self.role = role
     self.stars = stars
@@ -181,6 +181,7 @@ public struct RecognizedSM: Identifiable, Hashable {
       resolvedName: resolvedName,
       stats: stats,
       storedImageName: storedImageName,
+      imageFingerprint: imageFingerprint,
       rarity: rarity,
       role: role,
       stars: stars,
@@ -200,7 +201,7 @@ public struct RecognizedSM: Identifiable, Hashable {
       resolvedName: resolvedName,
       stats: stats,
       storedImageName: name,
-      imageHash: imageHash,
+      imageFingerprint: imageFingerprint,
       rarity: rarity,
       role: role,
       stars: stars,
@@ -228,7 +229,7 @@ public struct RecognizedSM: Identifiable, Hashable {
       resolvedName: resolvedName,
       stats: stats,
       storedImageName: storedImageName,
-      imageHash: imageHash,
+      imageFingerprint: imageFingerprint,
       rarity: rarity.nilIfEmpty,
       role: role.nilIfEmpty,
       stars: stars,

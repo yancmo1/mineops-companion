@@ -12,7 +12,7 @@ struct StrategySummaryView: View {
                     CardContainer {
                         Text("Import manager cards first to generate a plan.")
                             .mineOpsBody()
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.7))
                     }
                 }
 

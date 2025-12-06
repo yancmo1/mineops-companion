@@ -11,7 +11,8 @@ struct IconLabelerView: View {
     @State private var showingAlignmentMode = false
     @State private var adjustedEntry: HarvestEntry?
     @State private var imageRefreshTrigger = UUID()
-    @State private var alignmentTransform = IconAlignmentTransform()
+    @State private var alignmentScale: CGFloat = 1.0
+    @State private var alignmentOffset: CGSize = .zero
     
     var body: some View {
         NavigationStack {
@@ -33,7 +34,7 @@ struct IconLabelerView: View {
                         
                         Text("Labeled \(labels.count) icon\(labels.count == 1 ? "" : "s")")
                             .mineOpsBody()
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.7))
                         
                         HStack(spacing: 12) {
                             Button("Auto-Identify") {
@@ -55,7 +56,7 @@ struct IconLabelerView: View {
                         // Progress
                         Text("\(currentIndex + 1) of \(harvestEntries.count)")
                             .mineOpsCaption()
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.6))
                         
                         // Manager info
                         Text(entry.managerName)
@@ -68,6 +69,27 @@ struct IconLabelerView: View {
                                 .foregroundStyle(entry.isUnlocked ? .green : .secondary)
                         }
                         .mineOpsCaption()
+
+                        // Saved label status
+                        if let existingLabel = labels[entry.filename] {
+                            HStack(spacing: 8) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color.green)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("SAVED LABEL")
+                                        .font(.caption2)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(Color.green)
+                                    Text(existingLabel.displayName)
+                                        .mineOpsBody()
+                                        .foregroundStyle(Color.green)
+                                }
+                            }
+                            .padding(12)
+                            .background(Color.green.opacity(0.18))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .accessibilityIdentifier("savedLabelBadge")
+                        }
                         // Icon preview
                         if let image = loadImage(filename: entry.filename) {
                             VStack(spacing: 8) {
@@ -92,6 +114,30 @@ struct IconLabelerView: View {
                                     .font(.caption)
                                 }
                                 .buttonStyle(.bordered)
+
+                                // Preview of current selection (not yet saved)
+                                if let labelName = currentLabelDisplayName(for: entry),
+                                   labels[entry.filename] == nil {
+                                    HStack(alignment: .top, spacing: 8) {
+                                        Image(systemName: "circle.dashed")
+                                            .font(.title3)
+                                            .foregroundStyle(Color.orange)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("WILL SAVE AS")
+                                                .font(.caption2)
+                                                .fontWeight(.semibold)
+                                                .foregroundStyle(Color.orange)
+                                            Text(labelName)
+                                                .mineOpsBody()
+                                                .foregroundStyle(Color.orange)
+                                        }
+                                    }
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.orange.opacity(0.18))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    .accessibilityIdentifier("pendingLabelPreview")
+                                }
                             }
                         }
                         
@@ -99,7 +145,7 @@ struct IconLabelerView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Effect Category")
                                 .mineOpsBody()
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.white.opacity(0.7))
                             
                             Picker("Category", selection: $selectedCategory) {
                                 Text("Passive").tag(IconLabel.Category.passive)
@@ -121,7 +167,7 @@ struct IconLabelerView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Passive Effect")
                                     .mineOpsBody()
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.7))
                                 
                                 Picker("Passive Effect", selection: $selectedPassive) {
                                     Text("Select passive type...").tag(PassiveEffectType?.none)
@@ -137,7 +183,7 @@ struct IconLabelerView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Active Effect")
                                     .mineOpsBody()
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.7))
                                 
                                 Picker("Active Effect", selection: $selectedActive) {
                                     Text("Select active type...").tag(ActiveEffectType?.none)
@@ -153,7 +199,7 @@ struct IconLabelerView: View {
                         
                         if let errorMessage {
                             Text(errorMessage)
-                                .foregroundStyle(.red)
+                                .foregroundStyle(errorMessage.hasPrefix("✅") ? .green : .red)
                                 .mineOpsCaption()
                         }
                         
@@ -192,10 +238,11 @@ struct IconLabelerView: View {
             if currentIndex < harvestEntries.count {
                 IconAlignmentView(
                     entry: harvestEntries[currentIndex],
-                    initialTransform: alignmentTransform,
+                    initialTransform: IconAlignmentTransform(offset: alignmentOffset, scale: alignmentScale),
                     onSave: { adjustedEntry, transform in
                         self.adjustedEntry = adjustedEntry
-                        alignmentTransform = transform
+                        alignmentScale = transform.scale
+                        alignmentOffset = transform.offset
                         imageRefreshTrigger = UUID()
                         showingAlignmentMode = false
                     }
@@ -343,8 +390,14 @@ struct IconLabelerView: View {
         if saveLabelsToFile() {
             selectedPassive = nil
             selectedActive = nil
-            errorMessage = nil
+            errorMessage = "✅ Label saved successfully!"
             currentIndex += 1
+            
+            // Clear success message after a brief delay
+            Task {
+                try? await Task.sleep(for: .seconds(1.5))
+                errorMessage = nil
+            }
         } else {
             errorMessage = "Failed to save label"
         }
@@ -512,6 +565,23 @@ struct IconLabelerView: View {
     }
 }
 
+private extension IconLabelerView {
+    func currentLabelDisplayName(for entry: HarvestEntry) -> String? {
+        switch selectedCategory {
+        case .passive:
+            if let passive = selectedPassive {
+                return passive.displayName
+            }
+        case .active:
+            if let active = selectedActive {
+                return active.displayName
+            }
+        }
+
+        return labels[entry.filename]?.displayName
+    }
+}
+
 // MARK: - Models
 
 struct HarvestEntry: Identifiable {
@@ -541,6 +611,15 @@ struct IconLabel: Codable {
         self.category = category
         self.type = type
         self.unlocked = unlocked
+    }
+
+    var displayName: String {
+        switch category {
+        case .passive:
+            return PassiveEffectType(rawValue: type)?.displayName ?? type
+        case .active:
+            return ActiveEffectType(rawValue: type)?.displayName ?? type
+        }
     }
     
     private enum CodingKeys: String, CodingKey {

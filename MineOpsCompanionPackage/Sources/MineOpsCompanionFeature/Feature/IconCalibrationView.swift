@@ -39,11 +39,11 @@ struct IconCalibrationView: View {
                                 
                                 Text("RIGHT side under \"Passive\" label")
                                     .mineOpsCaption()
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(.white.opacity(0.6))
                                 
                                 Text("(warehouse 🏭, dollar 💲, box 📦)")
                                     .mineOpsCaption()
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.white.opacity(0.6))
                                 
                                 Text(expectedIconsText)
                                     .mineOpsCaption()
@@ -128,7 +128,7 @@ struct IconCalibrationView: View {
                         Text("Select a Super Manager screenshot to calibrate the passive ability icon positions. This helps ensure accurate icon harvesting across different screen sizes.")
                             .mineOpsBody()
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.7))
                             .padding(.horizontal)
                         
                         PhotosPicker(selection: $selectedPhoto, matching: .images) {
