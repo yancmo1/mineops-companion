@@ -1,9 +1,28 @@
 import Foundation
 
 public enum StrategyEngine {
+  public struct BurstStep: Identifiable, Equatable {
+    public let id = UUID()
+    public let order: Int
+    public let title: String          // e.g. "Prime Elevator"
+    public let managerName: String    // e.g. "Damian Jones"
+    public let role: String           // e.g. "Elevator", "Mineshaft", "Warehouse"
+    public let startOffsetSeconds: Int
+    public let durationSeconds: Int
+  }
+
   public struct Summary: Equatable {
     public let text: String
-    public init(text: String) { self.text = text }
+    public let burstSteps: [BurstStep]
+
+    public init(text: String, burstSteps: [BurstStep] = []) {
+      self.text = text
+      self.burstSteps = burstSteps
+    }
+
+    public static func == (lhs: Summary, rhs: Summary) -> Bool {
+      lhs.text == rhs.text && lhs.burstSteps == rhs.burstSteps
+    }
   }
 
   // Normalize ids/names/aliases for matching
@@ -22,6 +41,29 @@ public enum StrategyEngine {
       let cands = [m.id, m.name] + (m.aliases ?? [])
       return cands.map(norm).contains(want)
     }
+  }
+
+  private static func smName(for id: String, in roster: [RecognizedSM]) -> String {
+    roster.first { $0.directoryMatch?.id == id }?.directoryMatch?.name ?? id
+  }
+
+  private static func makeStep(
+    order: Int,
+    title: String,
+    managerId: String,
+    role: String,
+    start: Int,
+    duration: Int,
+    roster: [RecognizedSM]
+  ) -> BurstStep {
+    BurstStep(
+      order: order,
+      title: title,
+      managerName: smName(for: managerId, in: roster),
+      role: role,
+      startOffsetSeconds: start,
+      durationSeconds: duration
+    )
   }
 
   private static func level(_ idOrName: String, from roster: [RecognizedSM]) -> Int? {
@@ -97,7 +139,146 @@ public enum StrategyEngine {
       plan = "Need at least one of: (Thalia/Chester/H4V0C), plus (Lilly/Damian), plus (Edmund/Mark)."
     }
 
+    // Build burst steps
+    let hasDamian   = have("damian_jones", in: roster)
+    let hasSojo     = have("sojo", in: roster)
+    let hasLee      = have("lee_vatori", in: roster)
+    let hasThalia   = have("thalia", in: roster)
+    let hasFreesia  = have("freesia", in: roster)
+    let hasH4V0C    = have("h4v0c", in: roster)
+    let hasEdmund   = have("mr_edmund", in: roster)
+    let hasTurner   = have("mr_turner", in: roster)
+    let hasLuxario  = have("luxario", in: roster)
+    let hasAlTitude = have("al_titude", in: roster)
+    let hasMark     = have("mark", in: roster)
+
+    var burstSteps: [BurstStep] = []
+
+    // Step 1: Elevator booster (Damian > Sojo > Lee)
+    if hasDamian {
+      burstSteps.append(
+        makeStep(order: 1,
+                 title: "Prime Elevator",
+                 managerId: "damian_jones",
+                 role: "Elevator",
+                 start: 0,
+                 duration: 300,
+                 roster: roster)
+      )
+    } else if hasSojo {
+      burstSteps.append(
+        makeStep(order: 1,
+                 title: "Prime Elevator",
+                 managerId: "sojo",
+                 role: "Elevator",
+                 start: 0,
+                 duration: 300,
+                 roster: roster)
+      )
+    } else if hasLee {
+      burstSteps.append(
+        makeStep(order: 1,
+                 title: "Prime Elevator",
+                 managerId: "lee_vatori",
+                 role: "Elevator",
+                 start: 0,
+                 duration: 300,
+                 roster: roster)
+      )
+    }
+
+    // Step 2: Initial shaft wave (Thalia or Freesia)
+    if hasThalia {
+      burstSteps.append(
+        makeStep(order: 2,
+                 title: "Start Shaft Wave",
+                 managerId: "thalia",
+                 role: "Mineshaft",
+                 start: 0,
+                 duration: 90,
+                 roster: roster)
+      )
+    } else if hasFreesia {
+      burstSteps.append(
+        makeStep(order: 2,
+                 title: "Start Shaft Wave",
+                 managerId: "freesia",
+                 role: "Mineshaft",
+                 start: 0,
+                 duration: 60,
+                 roster: roster)
+      )
+    }
+
+    // Step 3: Swap to H4V0C for burst
+    if hasH4V0C {
+      burstSteps.append(
+        makeStep(order: 3,
+                 title: "Swap to Burst Shaft",
+                 managerId: "h4v0c",
+                 role: "Mineshaft",
+                 start: 60,
+                 duration: 180,
+                 roster: roster)
+      )
+    }
+
+    // Step 4: Edmund warehouse burst
+    if hasEdmund {
+      burstSteps.append(
+        makeStep(order: 4,
+                 title: "Warehouse Burst Window",
+                 managerId: "mr_edmund",
+                 role: "Warehouse",
+                 start: 90,
+                 duration: 120,
+                 roster: roster)
+      )
+    }
+
+    // Step 5: Turner cash-out inside Edmund
+    if hasTurner {
+      burstSteps.append(
+        makeStep(order: 5,
+                 title: "Cash-out Inside Edmund",
+                 managerId: "mr_turner",
+                 role: "Mineshaft",
+                 start: 150,
+                 duration: 30,
+                 roster: roster)
+      )
+    }
+
+    // Step 6: Filler warehouse manager between bursts
+    if hasLuxario || hasAlTitude || hasMark {
+      let fillerId: String
+      let fillerTitle: String
+
+      if hasLuxario {
+        fillerId = "luxario"
+        fillerTitle = "Luxario Fill Cycle"
+      } else if hasAlTitude {
+        fillerId = "al_titude"
+        fillerTitle = "Al Titude Fill Cycle"
+      } else {
+        fillerId = "mark"
+        fillerTitle = "Mark Fill Cycle"
+      }
+
+      burstSteps.append(
+        makeStep(order: 6,
+                 title: fillerTitle,
+                 managerId: fillerId,
+                 role: "Warehouse",
+                 start: 210,
+                 duration: 120,
+                 roster: roster)
+      )
+    }
+
     let boosters = topBoosters(roster)
-    return .init(text: boosters.isEmpty ? plan : "\(boosters)\n\n\(plan)")
+    let summaryText = boosters.isEmpty ? plan : "\(boosters)\n\n\(plan)"
+    
+    return Summary(text: summaryText, burstSteps: burstSteps)
   }
 }
