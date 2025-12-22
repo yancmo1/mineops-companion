@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 public final class StrategySummaryViewModel: ObservableObject {
   @Published public var strategyText: String = "No data yet."
+  @Published public var burstSteps: [StrategyEngine.BurstStep] = []
 
   public init() {}
 
@@ -12,6 +13,8 @@ public final class StrategySummaryViewModel: ObservableObject {
   }
 
   public func generate(from recognized: [RecognizedSM]) {
-    strategyText = StrategyEngine.generate(from: recognized).text
+    let summary = StrategyEngine.generate(from: recognized)
+    strategyText = summary.text
+    burstSteps = summary.burstSteps
   }
 }
