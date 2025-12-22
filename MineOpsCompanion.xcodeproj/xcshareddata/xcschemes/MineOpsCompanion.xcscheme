@@ -30,14 +30,21 @@
       shouldUseLaunchSchemeArgsEnv = "YES">
       <TestPlans>
          <TestPlanReference
-            reference = "container:MineOpsCompanion.xctestplan">
-         </TestPlanReference>
-         <TestPlanReference
             reference = "container:MineOpsCompanion/MineOpsCompanion.xctestplan"
             default = "YES">
          </TestPlanReference>
       </TestPlans>
       <Testables>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "MineOpsCompanionFeatureTests"
+               BuildableName = "MineOpsCompanionFeatureTests"
+               BlueprintName = "MineOpsCompanionFeatureTests"
+               ReferencedContainer = "container:MineOpsCompanionPackage">
+            </BuildableReference>
+         </TestableReference>
          <TestableReference
             skipped = "NO">
             <BuildableReference

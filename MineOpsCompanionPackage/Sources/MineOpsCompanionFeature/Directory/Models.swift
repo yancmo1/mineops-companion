@@ -7,24 +7,31 @@ public struct SMDirectoryEntry: Decodable, Identifiable, Hashable {
     public let durationSeconds: Int
     public let cooldownSeconds: Int
     public let multiplier: Double?
+    public let description: String?
   }
   public struct Passive: Decodable, Hashable {
     public let kind: String
     public let value: Double
     public let unlocked: Bool?
+    public let level: Int?
+    public let description: String?
   }
 
   public let id: String
   public let name: String
   public let department: String   // "mineshaft" | "elevator" | "warehouse"
   public let rarity: String
+  public let elements: [String]?  // e.g., ["Nature", "Water", "Sand"]
   public let active: Active?
   public let passives: [Passive]?
   public let aliases: [String]?
   public let notes: String?
+  public let availableByHiring: Bool?
+  public let availableInBriefcases: Bool?
 
   enum K: CodingKey {
-    case id, name, department, rarity, active, passives, aliases, notes
+    case id, name, department, rarity, elements, active, passives, aliases, notes
+    case availableByHiring, availableInBriefcases
     // legacy keys we normalize:
     case role, boostType, baseBoost, maxBoost, availability, cost, synergy, imageName
   }
@@ -38,10 +45,13 @@ public struct SMDirectoryEntry: Decodable, Identifiable, Hashable {
       name       = try c.decode(String.self, forKey: .name)
       department = try c.decode(String.self, forKey: .department)
       rarity     = try c.decodeIfPresent(String.self, forKey: .rarity) ?? "unknown"
+      elements   = try c.decodeIfPresent([String].self, forKey: .elements)
       active     = try c.decodeIfPresent(Active.self, forKey: .active)
       passives   = try c.decodeIfPresent([Passive].self, forKey: .passives)
       aliases    = try c.decodeIfPresent([String].self, forKey: .aliases)
       notes      = try c.decodeIfPresent(String.self, forKey: .notes)
+      availableByHiring    = try c.decodeIfPresent(Bool.self, forKey: .availableByHiring)
+      availableInBriefcases = try c.decodeIfPresent(Bool.self, forKey: .availableInBriefcases)
       return
     }
 
@@ -67,19 +77,23 @@ public struct SMDirectoryEntry: Decodable, Identifiable, Hashable {
     name       = rawName
     department = dept
     rarity     = "unknown"
+    elements   = nil
     let mult   = boost > 0 ? Double(boost)/100.0 : nil
     active     = Active(
       name: boostLbl,
       type: Self.slug(boostLbl),
       durationSeconds: Self.defaultDuration(for: rawName),
       cooldownSeconds: 900,
-      multiplier: mult
+      multiplier: mult,
+      description: nil
     )
     passives   = nil
     var alias  = [rawName.replacingOccurrences(of: ".", with: "")]
     if rawName == "H4V0C" { alias.append(contentsOf: ["HAVOC","H4VOC"]) }
     aliases    = alias
     notes      = nil
+    availableByHiring     = nil
+    availableInBriefcases = nil
   }
 
   static func slug(_ s: String) -> String {

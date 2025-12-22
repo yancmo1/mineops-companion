@@ -9,9 +9,9 @@ struct ResourceDecodingTests {
         _ = try ResourceLoader.url(for: "sm_directory", ext: "json")
     }
 
-    @Test("sm_directory.json decodes into SuperManager list")
+    @Test("sm_directory.json decodes into SMDirectoryEntry list")
     func directoryDecodes() throws {
-        let managers: [SuperManager] = try ResourceLoader.decode([SuperManager].self, from: "sm_directory")
+        let managers: [SMDirectoryEntry] = try ResourceLoader.decode([SMDirectoryEntry].self, from: "sm_directory")
         #expect(!managers.isEmpty, "Directory should contain at least one manager")
     }
 }

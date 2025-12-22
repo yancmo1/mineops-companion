@@ -13,6 +13,7 @@ struct StrategyPrompt: Codable, Hashable {
     let goal: String
 
     var text: String {
+        // Build roster text with department labels
         let rosterText: String
         if managerRoster.isEmpty {
             rosterText = "None"
@@ -22,40 +23,58 @@ struct StrategyPrompt: Codable, Hashable {
                 .joined(separator: ", ")
         }
         
-        // Check for unknown managers
+        // Check for unknown managers and build warning
         let unknownManagers = managerRoster.filter { $0.department == "Unknown" }
         let unknownWarning = unknownManagers.isEmpty ? "" : """
         
         WARNING: The following managers have unknown departments: \(unknownManagers.map(\.name).joined(separator: ", "))
-        If you recognize these managers, assign them to the correct position. Otherwise, exclude them from the strategy.
+        If you genuinely recognize them, assign correctly. Otherwise, EXCLUDE them from the plan.
         """
+        
+        // Max shaft for positioning guidance
+        let maxShaft = mineContext.maxShaft
         
         return """
         You are MineOps AI, an expert Idle Miner Tycoon strategist.
-        Design a concise manager rotation plan with timing guidance.
 
-        CRITICAL DEPARTMENT RULES:
-        • MINESHAFT managers = ONLY in mine shafts (never elevator/warehouse)
-        • ELEVATOR managers = ONLY in elevator (never shafts/warehouse)
-        • WAREHOUSE managers = ONLY in warehouse (never elevator/shafts)
-        • Do NOT recommend managers for wrong positions
-        • ONLY use managers from the "Available Managers" list below
+        Design a **burst rotation** for this mine using ONLY the managers listed below.
+
+        HARD RULES:
+        • MINESHAFT managers: only in mine shafts (never elevator/warehouse)
+        • ELEVATOR managers: only in elevator
+        • WAREHOUSE managers: only in warehouse
+        • There is **1 elevator slot**, **1 warehouse slot**, and multiple mine shafts.
+        • Do NOT assign more than **1 manager per department at the same time**.
+        • Only use manager NAMES that appear in "Available Managers".
         \(unknownWarning)
 
-        Include:
-        - Manager assignments by correct position (respect department restrictions above)
-        - Timed rotation steps (use 0:00 format, bullet points)
-        - Swap rationale and optional AFK setup
-        - Use **bold** and • bullets for clarity
-        - Create a memorable combo name (e.g. "Speed Demon Loop", "Warehouse Blitz")
+        YOUR JOB:
+        1. Pick **one elevator manager**, **one warehouse manager**, and **3–5 mineshaft managers** that form a strong combo.
+        2. Assume a burst window of about **5 minutes**.
+        3. Produce a **precise rotation** with timestamps like 0:00, 0:10, 1:30 based on typical skill durations:
+           - Long skills (~5m): fire at the start of the burst.
+           - Medium (1–2m): layer after the long skills.
+           - Short (30s): use as a finisher when income is already high.
+        4. Assign strongest mineshaft managers to the deepest shafts (Shaft \(maxShaft), then \(maxShaft - 1), \(maxShaft - 2)…).
+
+        THE PLAN MUST INCLUDE:
+        • Exact **positioning**: which manager in Elevator, Warehouse, and which **shaft numbers** for mineshaft managers.
+        • A **burst script**: step-by-step bullet points with timestamps in MM:SS format.
+        • Short **rationale**: why these managers and why this order.
+        • A rough **estimatedMultiplier** (overall cash gain during a well-executed burst).
+
+        FORBIDDEN:
+        • Vague phrases like "rotate every few minutes" or "maximize efficiency".
+        • Assigning multiple managers to the same department at the same time.
+        • Suggesting managers NOT in the Available Managers list.
 
         Return JSON:
         {
           "comboName": "creative strategy name",
-          "recommendedManagers": ["manager names used"],
-          "strategySummary": "1-2 sentence summary",
+          "recommendedManagers": ["names you actually use in the plan"],
+          "strategySummary": "1–2 sentence summary of the burst loop",
           "estimatedMultiplier": number,
-          "detailedPlan": "markdown tactical plan (keep under 800 chars)"
+          "detailedPlan": "Markdown bullets with timestamps and shaft assignments (<= 800 chars)"
         }
 
         INPUT:
