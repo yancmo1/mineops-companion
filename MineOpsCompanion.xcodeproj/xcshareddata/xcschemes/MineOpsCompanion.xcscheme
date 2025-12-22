@@ -80,8 +80,8 @@
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "OPENAI_API_KEY"
-            value = "***REMOVED***"
-            isEnabled = "YES">
+            value = "YOUR_OPENAI_API_KEY"
+            isEnabled = "NO">
          </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>
