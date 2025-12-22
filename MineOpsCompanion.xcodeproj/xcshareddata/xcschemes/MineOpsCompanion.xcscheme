@@ -80,8 +80,8 @@
       <EnvironmentVariables>
          <EnvironmentVariable
             key = "OPENAI_API_KEY"
-            value = "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"
-            isEnabled = "YES">
+            value = "YOUR_OPENAI_API_KEY"
+            isEnabled = "NO">
          </EnvironmentVariable>
       </EnvironmentVariables>
    </LaunchAction>
