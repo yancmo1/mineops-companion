@@ -72,6 +72,44 @@ struct StrategyResponse: Codable, Identifiable, Hashable {
         try container.encodeIfPresent(estimatedMultiplier, forKey: .estimatedMultiplier)
         try container.encodeIfPresent(detailedPlan, forKey: .detailedPlan)
     }
+    
+    /// Validates and sanitizes the strategy against the available manager roster.
+    /// - Parameter availableManagers: Set of manager names that were passed to the AI
+    /// - Returns: A validated copy with trimmed/filtered recommendedManagers
+    func validated(against availableManagers: Set<String>) -> StrategyResponse {
+        let availableLowercased = Set(availableManagers.map { $0.lowercased() })
+        
+        // Filter to only managers that were in the available list
+        let validManagers = recommendedManagers.filter { manager in
+            availableLowercased.contains(manager.lowercased())
+        }
+        
+        let trimmedCount = recommendedManagers.count - validManagers.count
+        if trimmedCount > 0 {
+            print("⚠️ Trimmed \(trimmedCount) unknown manager(s) from AI recommendation")
+        }
+        
+        // Cap at 8 managers max
+        var finalManagers = validManagers
+        if finalManagers.count > 8 {
+            print("⚠️ AI recommended \(finalManagers.count) managers, capping at 8")
+            finalManagers = Array(finalManagers.prefix(8))
+        }
+        
+        // Check for department duplicates (log warning only)
+        // This is informational since we don't have department info here
+        if finalManagers.count > 7 {
+            print("⚠️ Large manager count (\(finalManagers.count)) - verify no department duplicates")
+        }
+        
+        return StrategyResponse(
+            comboName: comboName,
+            recommendedManagers: finalManagers,
+            strategySummary: strategySummary,
+            estimatedMultiplier: estimatedMultiplier,
+            detailedPlan: detailedPlan
+        )
+    }
 }
 
 private extension String {

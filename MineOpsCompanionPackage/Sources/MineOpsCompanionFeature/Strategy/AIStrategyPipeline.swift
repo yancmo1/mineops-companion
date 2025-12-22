@@ -85,7 +85,12 @@ final class AIStrategyPipeline: ObservableObject {
                 goal: notes ?? "Optimize production for \(mineContext.promptDescription)"
             )
 
-            let strategy = try await AIStrategyEngine.shared.fetchStrategy(prompt: promptModel.text)
+            let rawStrategy = try await AIStrategyEngine.shared.fetchStrategy(prompt: promptModel.text)
+            
+            // Validate and sanitize the AI response against available managers
+            let availableNames = Set(managerRoster.map { $0.name })
+            let strategy = rawStrategy.validated(against: availableNames)
+            
             storeStrategy(
                 cacheKey: mineContext.cacheKey,
                 mineContext: mineContext,
