@@ -14,35 +14,42 @@ public enum SMCardValidator {
         var score: Double = 0.0
         var matchedIndicators: [String] = []
         var missingCritical: [String] = []
+
+        func matches(_ regex: String) -> Bool {
+            guard let re = try? NSRegularExpression(pattern: regex, options: [.caseInsensitive]) else { return false }
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            return re.firstMatch(in: text, options: [], range: range) != nil
+        }
         
-        // Critical indicators (must have at least one)
-        let criticalIndicators: [(pattern: String, weight: Double, name: String)] = [
-            ("level up", 0.25, "Level Up button"),
-            ("promote", 0.25, "Promote button"),
-            ("rank up", 0.20, "Rank Up button"),
+        // Critical indicators (must have at least one OR the screenshot must match a strong card-structure fallback).
+        // OCR often drops spaces in button labels (e.g. "RankUp", "LevelUp"), so we match flexibly.
+        let criticalIndicators: [(regex: String, weight: Double, name: String)] = [
+            (#"\blevel\s*up\b"#, 0.25, "Level Up button"),
+            (#"\bpromote\b"#, 0.25, "Promote button"),
+            (#"\brank\s*up\b"#, 0.20, "Rank Up button"),
         ]
         
         // Strong indicators
-        let strongIndicators: [(pattern: String, weight: Double, name: String)] = [
-            ("active", 0.15, "Active section"),
-            ("passive", 0.15, "Passive section"),
-            ("promotion:", 0.15, "Promotion label"),
-            ("level:", 0.10, "Level label"),
+        let strongIndicators: [(regex: String, weight: Double, name: String)] = [
+            (#"\bactive\b"#, 0.15, "Active section"),
+            (#"\bpassive\b"#, 0.15, "Passive section"),
+            (#"\bpromotion\s*:?\b"#, 0.15, "Promotion label"),
+            (#"\blevel\s*:?\b"#, 0.10, "Level label"),
         ]
         
         // Rarity indicators
-        let rarityIndicators: [(pattern: String, weight: Double, name: String)] = [
-            ("epic", 0.15, "Epic rarity"),
-            ("legendary", 0.15, "Legendary rarity"),
-            ("rare", 0.10, "Rare rarity"),
-            ("common", 0.10, "Common rarity"),
+        let rarityIndicators: [(regex: String, weight: Double, name: String)] = [
+            (#"\bepic\b"#, 0.15, "Epic rarity"),
+            (#"\blegendary\b"#, 0.15, "Legendary rarity"),
+            (#"\brare\b"#, 0.10, "Rare rarity"),
+            (#"\bcommon\b"#, 0.10, "Common rarity"),
         ]
         
         // Department indicators
-        let departmentIndicators: [(pattern: String, weight: Double, name: String)] = [
-            ("mineshaft", 0.15, "Mineshaft department"),
-            ("elevator", 0.15, "Elevator department"),
-            ("warehouse", 0.15, "Warehouse department"),
+        let departmentIndicators: [(regex: String, weight: Double, name: String)] = [
+            (#"\bmineshaft\b"#, 0.15, "Mineshaft department"),
+            (#"\belevator\b"#, 0.15, "Elevator department"),
+            (#"\bwarehouse\b"#, 0.15, "Warehouse department"),
         ]
         
         // Numeric patterns typical of SM cards
@@ -57,22 +64,18 @@ public enum SMCardValidator {
         ]
         
         // Check critical indicators
-        var hasCritical = false
+        var hasActionButton = false
         for indicator in criticalIndicators {
-            if text.contains(indicator.pattern) {
+            if matches(indicator.regex) {
                 score += indicator.weight
                 matchedIndicators.append(indicator.name)
-                hasCritical = true
+                hasActionButton = true
             }
-        }
-        
-        if !hasCritical {
-            missingCritical.append("No Level Up/Promote/Rank Up button found")
         }
         
         // Check strong indicators
         for indicator in strongIndicators {
-            if text.contains(indicator.pattern) {
+            if matches(indicator.regex) {
                 score += indicator.weight
                 matchedIndicators.append(indicator.name)
             }
@@ -81,7 +84,7 @@ public enum SMCardValidator {
         // Check rarity (only count one)
         var hasRarity = false
         for indicator in rarityIndicators {
-            if text.contains(indicator.pattern) && !hasRarity {
+            if matches(indicator.regex) && !hasRarity {
                 score += indicator.weight
                 matchedIndicators.append(indicator.name)
                 hasRarity = true
@@ -91,7 +94,7 @@ public enum SMCardValidator {
         // Check department (only count one)
         var hasDepartment = false
         for indicator in departmentIndicators {
-            if text.contains(indicator.pattern) && !hasDepartment {
+            if matches(indicator.regex) && !hasDepartment {
                 score += indicator.weight
                 matchedIndicators.append(indicator.name)
                 hasDepartment = true
@@ -112,7 +115,17 @@ public enum SMCardValidator {
         // Cap at 1.0
         score = min(score, 1.0)
         
-        let isValid = score >= minimumConfidence && hasCritical
+        // Fallback for cases where OCR misses button labels: require a strong SM-card structure.
+        // This should still reject most non-game images while being robust to OCR quirks.
+        let hasActiveAndPassive = matches(#"\bactive\b"#) && matches(#"\bpassive\b"#)
+        let hasProgressFraction = matches(#"\b\d{1,2}\s*/\s*50\b"#) || matches(#"\b\d{1,2}\s*/\s*5\b"#)
+        let hasCardStructure = hasActiveAndPassive && hasProgressFraction
+
+        if !hasActionButton && !hasCardStructure {
+            missingCritical.append("No SM button labels (Level Up/Promote/Rank Up) and no strong card structure")
+        }
+
+        let isValid = score >= minimumConfidence && (hasActionButton || hasCardStructure)
         
         return ValidationResult(
             isValid: isValid,

@@ -51,7 +51,7 @@ public struct RecognizedSM: Identifiable, Hashable {
     }
 
     var isEmpty: Bool {
-      effect == nil && multiplier == nil && durationSeconds == nil
+      effect == nil && multiplier == nil && durationSeconds == nil && unlockedSlots.isEmpty
     }
   }
 
@@ -105,6 +105,18 @@ public struct RecognizedSM: Identifiable, Hashable {
 
   public var confidence: Double {
     (level != nil ? 0.5 : 0) + (directoryMatch != nil ? 0.5 : 0)
+  }
+
+  /// Elements (affinities) as defined by the directory, if available.
+  public var elements: [SMElement] {
+    guard let elements = directoryMatch?.elements, !elements.isEmpty else { return [] }
+    return elements.map(SMElement.init)
+  }
+
+  /// A compact string suitable for UI/prompt usage.
+  public var elementAffinityDisplay: String {
+    let values = elements.map { $0.name }.filter { !$0.isEmpty }
+    return values.isEmpty ? "Unknown" : values.joined(separator: ", ")
   }
 
   public var departmentDisplay: String {
@@ -168,7 +180,21 @@ public struct RecognizedSM: Identifiable, Hashable {
   }
 
   public var identityKey: String {
-    directoryMatch?.id ?? resolvedName.lowercased()
+    if let id = directoryMatch?.id {
+      return id
+    }
+
+    // If we can't match a directory entry, the OCR-derived name can be wrong (or the same across
+    // multiple screenshots), which would collapse distinct cards during import/merge.
+    if let digest = imageFingerprint?.pixelDigest {
+      return "fp_\(digest)"
+    }
+
+    if let hash = imageFingerprint?.perceptualHash {
+      return "phash_\(hash)"
+    }
+
+    return resolvedName.lowercased()
   }
 
   public func updating(id newID: UUID, storedImageName: String?) -> RecognizedSM {

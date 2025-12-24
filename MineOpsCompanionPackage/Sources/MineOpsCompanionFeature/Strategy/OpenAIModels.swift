@@ -2,14 +2,9 @@ import Foundation
 
 // MARK: - Strategy Prompt
 
-struct ManagerRosterEntry: Codable, Hashable {
-    let name: String
-    let department: String
-}
-
 struct StrategyPrompt: Codable, Hashable {
     let mineContext: MineContext
-    let managerRoster: [ManagerRosterEntry]
+    let managerRoster: [StrategyRosterExportEntry]
     let goal: String
 
     var text: String {
@@ -21,6 +16,15 @@ struct StrategyPrompt: Codable, Hashable {
             rosterText = managerRoster
                 .map { "\($0.name) (\($0.department))" }
                 .joined(separator: ", ")
+        }
+
+        let rosterDetails: String
+        if managerRoster.isEmpty {
+            rosterDetails = "None"
+        } else {
+            rosterDetails = managerRoster
+                .map { "- \($0.promptLine)" }
+                .joined(separator: "\n")
         }
         
         // Check for unknown managers and build warning
@@ -80,12 +84,16 @@ struct StrategyPrompt: Codable, Hashable {
         INPUT:
         Mine: \(mineContext.promptDescription)
         Available Managers: \(rosterText)
+        Roster Details (use these numbers; if a value is missing, treat it as unknown):
+        \(rosterDetails)
         Goal: \(goal)
         """
     }
 
     var cacheKey: String {
-        let managerKeys = managerRoster.map { $0.name }.joined(separator: ",")
+        let managerKeys = managerRoster
+            .map { "\($0.name)|\($0.department)|\($0.levelCurrent ?? -1)/\($0.levelMax ?? -1)|\($0.activeMultiplier ?? -1)" }
+            .joined(separator: ",")
         return "\(mineContext.cacheKey)|\(managerKeys)|\(goal.lowercased())"
     }
 }
@@ -138,7 +146,11 @@ enum ResponsesPayloadBuilder {
             "max_output_tokens": 1200
         ]
 
-        print("🧾 Final payload:", payload)
+        #if DEBUG
+        // Intentionally do NOT log the full payload (can be large and may include user notes).
+        // Logger is preferred over print, but keep this lightweight for now.
+        print("🧾 OpenAI strategy payload built (model=\(model))")
+        #endif
         return payload
     }
 
@@ -161,7 +173,10 @@ enum ResponsesPayloadBuilder {
             "max_output_tokens": 200
         ]
 
-        print("🧾 Final payload (detection):", payload)
+        #if DEBUG
+        // Never log base64 image payloads.
+        print("🧾 OpenAI detection payload built (model=\(model))")
+        #endif
         return payload
     }
 

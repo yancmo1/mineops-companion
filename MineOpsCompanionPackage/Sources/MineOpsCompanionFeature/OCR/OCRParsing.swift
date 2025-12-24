@@ -42,12 +42,15 @@ public enum DirectoryMatcher {
     guard !raw.isEmpty else { return nil }
 
     // Direct containment in the raw line earns a perfect score.
+    // NOTE: We intentionally only check `raw.contains(candidate)`.
+    // Allowing `candidate.contains(raw)` creates severe false positives when OCR emits short
+    // fragments (e.g. "u", "ut"), which would incorrectly match entries like "Ut'ux".
     for entry in dir {
       let names = [entry.name] + (entry.aliases ?? [])
       for candidate in names {
         let normalized = norm(candidate)
         if normalized.isEmpty { continue }
-        if raw.contains(normalized) || normalized.contains(raw) {
+        if normalized.count >= 3, raw.contains(normalized) {
           return (entry, 1.0)
         }
       }
@@ -140,6 +143,8 @@ public enum OCRTextHeuristics {
   private static let blacklistPatterns: [NSRegularExpression] = {
     let patterns = [
       #"^\d+$"#,                          // Just numbers
+      #"^\d+\s*[kmbt]$"#,                 // Compact numbers like 154K, 2M, 1B
+      #"^\d+(?:\.\d+)?\s*[kmbt]$"#,       // Compact decimals like 1.5K, 2.3M
       #"^\d+\s*[x%]"#,                    // Multipliers like "5x" or "500%"
       #"^[x%]\s*\d+"#,                    // Reversed like "x5"
       #"^\d+\s*(m|min|s|sec|h|hr)"#,      // Duration like "5m" or "30s"

@@ -5,6 +5,12 @@
 ## User settings
 xcuserdata/
 
+## Build artifacts / Derived data
+DerivedData/
+.derivedData-mcp/
+.derivedData/
+*.xcuserstate
+
 ## Obj-C/Swift specific
 *.hmap
 

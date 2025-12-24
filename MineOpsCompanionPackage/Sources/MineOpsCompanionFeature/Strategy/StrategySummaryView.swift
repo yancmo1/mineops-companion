@@ -3,7 +3,9 @@ import UIKit
 
 struct StrategySummaryView: View {
     @EnvironmentObject private var review: OCRReviewViewModel
-    @StateObject private var viewModel = StrategySummaryViewModel()
+
+    @State private var strategyText: String = "No data yet."
+    @State private var burstSteps: [StrategyEngine.BurstStep] = []
 
     var body: some View {
         ScrollView {
@@ -17,16 +19,16 @@ struct StrategySummaryView: View {
                 }
 
                 CardContainer(title: "Strategy Summary") {
-                    Text(viewModel.strategyText)
+                    Text(strategyText)
                         .mineOpsBody()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityIdentifier("strategySummaryText")
                 }
 
-                if !viewModel.burstSteps.isEmpty {
+                if !burstSteps.isEmpty {
                     CardContainer(title: "Burst Macro") {
                         VStack(alignment: .leading, spacing: MineOpsLayout.itemSpacing) {
-                            ForEach(viewModel.burstSteps) { step in
+                            ForEach(burstSteps) { step in
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("#\(step.order) \(step.title)")
                                         .font(.headline)
@@ -47,9 +49,9 @@ struct StrategySummaryView: View {
                 }
 
                 MineOpsButton(label: "Generate Strategy", icon: "wand.and.stars") {
-                    viewModel.generate(from: review.recognized)
+                    generate(from: review.recognized)
                 }
-                .disabled(!viewModel.canGenerate(from: review.recognized))
+                .disabled(!canGenerate(from: review.recognized))
                 .accessibilityIdentifier("generateStrategyButton")
             }
             .padding(MineOpsLayout.cardPadding)
@@ -69,13 +71,24 @@ struct StrategySummaryView: View {
                     .foregroundStyle(Color.accentCyan)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: { viewModel.generate(from: review.recognized) }) {
+                Button(action: { generate(from: review.recognized) }) {
                     Image(systemName: "arrow.triangle.2.circlepath")
                 }
-                .disabled(!viewModel.canGenerate(from: review.recognized))
+                .disabled(!canGenerate(from: review.recognized))
                 .accessibilityLabel("Regenerate strategy")
             }
         }
+    }
+
+    private func canGenerate(from recognized: [RecognizedSM]) -> Bool {
+        let depts = Set(recognized.compactMap { $0.directoryMatch?.department })
+        return depts.contains("mineshaft") && depts.contains("elevator") && depts.contains("warehouse")
+    }
+
+    private func generate(from recognized: [RecognizedSM]) {
+        let summary = StrategyEngine.generate(from: recognized)
+        strategyText = summary.text
+        burstSteps = summary.burstSteps
     }
 }
 

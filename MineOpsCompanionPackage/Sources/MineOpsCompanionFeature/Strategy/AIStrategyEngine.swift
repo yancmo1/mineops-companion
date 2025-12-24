@@ -2,6 +2,7 @@
 
 import Foundation
 import UIKit
+import OSLog
 
 actor AIStrategyEngine {
     enum StrategyError: LocalizedError {
@@ -11,7 +12,8 @@ actor AIStrategyEngine {
 
         var errorDescription: String? {
             switch self {
-            case .missingAPIKey: return "OPENAI_API_KEY not found in environment variables."
+            case .missingAPIKey:
+                return "OpenAI API key is missing. Add it in Settings → OpenAI."
             case .invalidResponse: return "Unable to decode strategy response."
             case .apiError(let message): return message
             }
@@ -23,7 +25,6 @@ actor AIStrategyEngine {
     private let endpoint: URL = URL(string: "https://api.openai.com/v1/responses")!
     private let model = "gpt-4o-mini"
     private let maxRetries = 3
-    private var cache: [String: StrategyResponse] = [:]
     private let session: URLSession
 
     private init() {
@@ -36,14 +37,7 @@ actor AIStrategyEngine {
     // MARK: - OpenAI-backed strategy generation
 
     func fetchStrategy(prompt: String) async throws -> StrategyResponse {
-        if let cached = cache[prompt] {
-            #if DEBUG
-            print("Cache hit for strategy prompt")
-            #endif
-            return cached
-        }
-
-        guard let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"], !apiKey.isEmpty else {
+        guard let apiKey = await OpenAIKeyStore.shared.resolvedAPIKey(), !apiKey.isEmpty else {
             throw StrategyError.missingAPIKey
         }
 
@@ -53,13 +47,7 @@ actor AIStrategyEngine {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try Self.encodePayload(prompt: prompt, model: model)
 
-        let strategy = try await perform(request: request, attempt: 1)
-        cache[prompt] = strategy
-        return strategy
-    }
-
-    func clearCache() {
-        cache.removeAll()
+        return try await perform(request: request, attempt: 1)
     }
 
     private func perform(request: URLRequest, attempt: Int) async throws -> StrategyResponse {
@@ -67,9 +55,8 @@ actor AIStrategyEngine {
             let (data, response) = try await session.data(for: request)
 
             #if DEBUG
-            if let raw = String(data: data, encoding: .utf8) {
-                print("RAW OpenAI response (debug):\n\(raw)")
-            }
+            // Keep debug logging minimal to avoid leaking user content or large responses into logs.
+            Logger.strategy.debug("OpenAI responses returned \(data.count, privacy: .public) bytes")
             #endif
 
             guard let httpResponse = response as? HTTPURLResponse else {

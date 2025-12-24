@@ -151,6 +151,12 @@ public final class ScreenshotsFetcher: NSObject, @unchecked Sendable, PHPhotoLib
     processedIdentifiers.removeAll()
     persistProcessedIdentifiers()
   }
+
+  /// Clears processed IDs and the last-import date, forcing the next import to rescan.
+  public func resetImportTracking() {
+    clearProcessedIdentifiers()
+    lastImportDate = nil
+  }
   
   // MARK: - PHPhotoLibraryChangeObserver
   
@@ -203,14 +209,45 @@ public final class ScreenshotsFetcher: NSObject, @unchecked Sendable, PHPhotoLib
       let options = PHImageRequestOptions()
       options.isSynchronous = false
       options.deliveryMode = .highQualityFormat
+      options.resizeMode = .none
       options.isNetworkAccessAllowed = true
-      
+
+      var didResume = false
+
+      // Important: PhotoKit may call the result handler multiple times (first a degraded thumbnail,
+      // then the full-quality image). If we resume on the first callback, OCR is run on a tiny
+      // preview and fails to detect game UI reliably.
       PHImageManager.default().requestImage(
         for: asset,
         targetSize: PHImageManagerMaximumSize,
         contentMode: .aspectFit,
         options: options
-      ) { image, _ in
+      ) { image, info in
+        guard !didResume else { return }
+
+        if let info,
+           let cancelled = info[PHImageCancelledKey] as? Bool,
+           cancelled {
+          didResume = true
+          continuation.resume(returning: nil)
+          return
+        }
+
+        if let info,
+           info[PHImageErrorKey] != nil {
+          didResume = true
+          continuation.resume(returning: nil)
+          return
+        }
+
+        if let info,
+           let isDegraded = info[PHImageResultIsDegradedKey] as? Bool,
+           isDegraded {
+          // Wait for the non-degraded callback.
+          return
+        }
+
+        didResume = true
         continuation.resume(returning: image)
       }
     }

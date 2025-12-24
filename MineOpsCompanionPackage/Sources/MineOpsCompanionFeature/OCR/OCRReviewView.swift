@@ -10,6 +10,7 @@ struct OCRReviewView: View {
     @State private var progressMessage: String?
     @StateObject private var ocr = OCRProcessor()
     @State private var isEditingManager = false
+    @State private var showingSettings = false
     @State private var editingRecord: RecognizedSM?
     @State private var editDraft = RecognizedSMEditDraft()
     @State private var expandedCardIds = Set<UUID>()
@@ -204,9 +205,14 @@ struct OCRReviewView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Image(systemName: "gearshape.2.fill")
-                    .foregroundStyle(Color.accentCyan)
-                    .accessibilityHidden(true)
+                Button {
+                    showingSettings = true
+                } label: {
+                    Image(systemName: "gearshape.2.fill")
+                        .foregroundStyle(Color.accentCyan)
+                }
+                .accessibilityLabel("Open settings")
+                .accessibilityIdentifier("openSettingsButton")
             }
             ToolbarItem(placement: .principal) {
                 Text("Manager")
@@ -251,6 +257,9 @@ struct OCRReviewView: View {
                         .accessibilityHidden(true)
                 }
             }
+        }
+        .sheet(isPresented: $showingSettings) {
+            MineOpsSettingsView()
         }
         .sheet(isPresented: $isEditingManager, onDismiss: {
             editingRecord = nil
@@ -594,7 +603,8 @@ private struct RecognizedSMEditDraft {
         let passiveInfo = RecognizedSM.PassiveInfo(
             effect: cleaned(passiveEffect),
             multiplier: parseMultiplier(passiveMultiplier),
-            durationSeconds: parseDuration(passiveDuration)
+            durationSeconds: parseDuration(passiveDuration),
+            unlockedSlots: original.passive.unlockedSlots
         )
 
         let actionFlags = RecognizedSM.ActionFlags(

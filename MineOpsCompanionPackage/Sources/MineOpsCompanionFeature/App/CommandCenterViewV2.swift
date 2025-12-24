@@ -5,6 +5,7 @@ struct CommandCenterViewV2: View {
 
     @State private var navigateToImport = false
     @State private var navigateToStrategy = false
+    @State private var showingSettings = false
 
     var body: some View {
         NavigationStack {
@@ -22,9 +23,14 @@ struct CommandCenterViewV2: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Image(systemName: "gearshape.2.fill")
-                        .foregroundStyle(Color.accentCyan)
-                        .accessibilityHidden(true)
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.2.fill")
+                            .foregroundStyle(Color.accentCyan)
+                    }
+                    .accessibilityLabel("Open settings")
+                    .accessibilityIdentifier("openSettingsButton")
                 }
                 ToolbarItem(placement: .principal) {
                     Text("MineOps Dashboard")
@@ -44,6 +50,9 @@ struct CommandCenterViewV2: View {
             }
             .navigationDestination(isPresented: $navigateToStrategy) {
                 StrategyPipelineView()
+            }
+            .sheet(isPresented: $showingSettings) {
+                MineOpsSettingsView()
             }
         }
     }
