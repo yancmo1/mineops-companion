@@ -29,11 +29,39 @@ final class MineSettingsStore {
         get { defaults.integer(forKey: "\(keyPrefix)mainland.mineNumber").nonZero ?? 1 }
         set { defaults.set(newValue, forKey: "\(keyPrefix)mainland.mineNumber") }
     }
+
+    // MARK: - Numbered Progression (Mainland / Frontier)
+
+    func mineNumber(for mineType: MineType) -> Int {
+        // Back-compat: keep using the original mainland key.
+        if mineType == .mainland {
+            return mainlandMineNumber
+        }
+        let key = key(for: mineType, continentMine: nil, suffix: "mineNumber")
+        if defaults.object(forKey: key) == nil {
+            return 1
+        }
+        return max(1, defaults.integer(forKey: key))
+    }
+
+    func setMineNumber(_ value: Int, for mineType: MineType) {
+        if mineType == .mainland {
+            mainlandMineNumber = value
+            return
+        }
+        let key = key(for: mineType, continentMine: nil, suffix: "mineNumber")
+        defaults.set(value, forKey: key)
+    }
     
     // MARK: - Per-Mine Settings
     
     func prestige(for mineType: MineType, continentMine: ContinentMine? = nil) -> Int {
-        defaults.integer(forKey: key(for: mineType, continentMine: continentMine, suffix: "prestige")).nonZero ?? 5
+        let prestigeKey = key(for: mineType, continentMine: continentMine, suffix: "prestige")
+        // UserDefaults returns 0 for missing keys; 0 is a valid prestige value.
+        if defaults.object(forKey: prestigeKey) == nil {
+            return 0
+        }
+        return max(0, defaults.integer(forKey: prestigeKey))
     }
     
     func setPrestige(_ value: Int, for mineType: MineType, continentMine: ContinentMine? = nil) {

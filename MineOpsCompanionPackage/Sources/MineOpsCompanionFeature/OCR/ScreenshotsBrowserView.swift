@@ -282,32 +282,48 @@ struct ScreenshotsBrowserView: View {
     
     private func loadImage(from asset: PHAsset) async -> UIImage? {
         await withCheckedContinuation { continuation in
-            var hasResumed = false
-            
+            var didResume = false
+
             let options = PHImageRequestOptions()
             options.isSynchronous = false
             options.deliveryMode = .highQualityFormat
             options.isNetworkAccessAllowed = true
             options.resizeMode = .exact
-            
+
             // Request at a reasonable size to avoid memory issues
             let targetSize = CGSize(width: 1290, height: 2796) // iPhone 15 Pro Max resolution
-            
+
             PHImageManager.default().requestImage(
                 for: asset,
                 targetSize: targetSize,
                 contentMode: .aspectFit,
                 options: options
             ) { image, info in
-                // Only resume once - PHImageManager may call this multiple times
-                guard !hasResumed else { return }
-                
-                // Only accept the final image (not degraded placeholder)
-                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if !isDegraded {
-                    hasResumed = true
-                    continuation.resume(returning: image)
+                guard !didResume else { return }
+
+                if let info,
+                   let cancelled = info[PHImageCancelledKey] as? Bool,
+                   cancelled {
+                    didResume = true
+                    continuation.resume(returning: nil)
+                    return
                 }
+
+                if let info,
+                   info[PHImageErrorKey] != nil {
+                    didResume = true
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                let isDegraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
+                if isDegraded {
+                    // Wait for the non-degraded callback.
+                    return
+                }
+
+                didResume = true
+                continuation.resume(returning: image)
             }
         }
     }
@@ -361,29 +377,52 @@ private struct ScreenshotThumbnailView: View {
     private func loadThumbnail() async {
         let options = PHImageRequestOptions()
         options.isSynchronous = false
-        options.deliveryMode = .fastFormat  // Get single fast thumbnail only
+        // Opportunistic is more reliable than fastFormat when assets are iCloud-backed.
+        options.deliveryMode = .opportunistic
         options.resizeMode = .fast
+        options.isNetworkAccessAllowed = true
         
         // Higher resolution thumbnails for better quality
         let targetSize = CGSize(width: 400, height: 800)
         
-        // Use async/await pattern that handles single callback
+        // Use an async bridge, but don't complete on an initial nil callback.
         let image: UIImage? = await withCheckedContinuation { continuation in
-            var hasResumed = false
-            
+            var didResume = false
+
             PHImageManager.default().requestImage(
                 for: asset,
                 targetSize: targetSize,
                 contentMode: .aspectFill,
                 options: options
-            ) { image, _ in
-                // Only resume once - PHImageManager may call this multiple times
-                guard !hasResumed else { return }
-                hasResumed = true
-                continuation.resume(returning: image)
+            ) { image, info in
+                guard !didResume else { return }
+
+                if let info,
+                   let cancelled = info[PHImageCancelledKey] as? Bool,
+                   cancelled {
+                    didResume = true
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                if let info,
+                   info[PHImageErrorKey] != nil {
+                    didResume = true
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                // If PhotoKit gives us an image (even degraded), show it.
+                if let image {
+                    didResume = true
+                    continuation.resume(returning: image)
+                    return
+                }
+
+                // Otherwise keep waiting for the next callback (common when iCloud download starts).
             }
         }
-        
+
         await MainActor.run {
             thumbnail = image
         }

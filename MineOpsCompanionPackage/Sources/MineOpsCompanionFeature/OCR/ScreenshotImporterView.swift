@@ -8,25 +8,34 @@ struct ScreenshotImporterView: View {
     @State private var progressMessage = ""
     @State private var importedNames: [String] = []
     @State private var updatedNames: [String] = []
+    @State private var unchangedCount = 0
     @State private var skippedDuplicateCount = 0
     @State private var skippedNonGameCount = 0
     @State private var errorMessage: String?
+    @State private var showingResetConfirm = false
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                if isProcessing {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                    
-                    Text(progressMessage)
-                        .mineOpsBody()
-                        .multilineTextAlignment(.center)
-                        .padding()
-                } else if !importedNames.isEmpty || !updatedNames.isEmpty || skippedDuplicateCount > 0 || skippedNonGameCount > 0 {
-                    VStack(spacing: 16) {
-                        Text("Import Complete")
-                            .mineOpsHeadingStyle()
+            ScrollView {
+                VStack(spacing: 24) {
+                    if isProcessing {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        
+                        Text(progressMessage)
+                            .mineOpsBody()
+                            .multilineTextAlignment(.center)
+                            .padding()
+                    } else if !importedNames.isEmpty || !updatedNames.isEmpty || unchangedCount > 0 || skippedDuplicateCount > 0 || skippedNonGameCount > 0 {
+                        VStack(spacing: 16) {
+                            Text("Import Complete")
+                                .mineOpsHeadingStyle()
+
+                        HStack(spacing: 12) {
+                            summaryPill(label: "New", value: importedNames.count, systemImage: "checkmark.circle.fill", color: .green)
+                            summaryPill(label: "Updated", value: updatedNames.count, systemImage: "arrow.triangle.2.circlepath.circle.fill", color: .cyan)
+                            summaryPill(label: "Unchanged", value: unchangedCount, systemImage: "minus.circle.fill", color: .white.opacity(0.6))
+                        }
                         
                         if !importedNames.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
@@ -34,7 +43,7 @@ struct ScreenshotImporterView: View {
                                     .mineOpsBody()
                                     .foregroundStyle(.white.opacity(0.7))
                                 
-                                ForEach(importedNames, id: \.self) { name in
+                                ForEach(Array(importedNames.enumerated()), id: \.offset) { _, name in
                                     HStack(spacing: 8) {
                                         Image(systemName: "checkmark.circle.fill")
                                             .foregroundStyle(.green)
@@ -55,7 +64,7 @@ struct ScreenshotImporterView: View {
                                     .mineOpsBody()
                                     .foregroundStyle(.white.opacity(0.7))
                                 
-                                ForEach(updatedNames, id: \.self) { name in
+                                ForEach(Array(updatedNames.enumerated()), id: \.offset) { _, name in
                                     HStack(spacing: 8) {
                                         Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
                                             .foregroundStyle(.cyan)
@@ -93,46 +102,50 @@ struct ScreenshotImporterView: View {
                             }
                         }
                         
-                        Button("Done") {
-                            dismiss()
+                            Button("Done") {
+                                dismiss()
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color.accentCyan)
+                            .controlSize(.large)
+                            .accessibilityIdentifier("screenshotImporterDoneButton")
+                        }
+                    } else {
+                        Image(systemName: "photo.stack")
+                            .font(.system(size: 60))
+                            .foregroundColor(Color.accentCyan)
+                        
+                        Text("Import New Screenshots")
+                            .mineOpsHeadingStyle()
+                        
+                        Text("This will scan your Screenshots album and import any new Super Manager cards that haven't been processed yet.")
+                            .mineOpsBody()
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.white.opacity(0.7))
+                            .padding(.horizontal)
+                        
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .foregroundStyle(.red)
+                                .mineOpsCaption()
+                                .padding()
+                        }
+                        
+                        Button {
+                            Task { await importNewScreenshots() }
+                        } label: {
+                            Label("Start Import", systemImage: "arrow.down.circle.fill")
+                                .font(.headline)
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Color.accentCyan)
                         .controlSize(.large)
+                        .accessibilityIdentifier("screenshotImporterStartButton")
                     }
-                } else {
-                    Image(systemName: "photo.stack")
-                        .font(.system(size: 60))
-                        .foregroundColor(Color.accentCyan)
-                    
-                    Text("Import New Screenshots")
-                        .mineOpsHeadingStyle()
-                    
-                    Text("This will scan your Screenshots album and import any new Super Manager cards that haven't been processed yet.")
-                        .mineOpsBody()
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(.white.opacity(0.7))
-                        .padding(.horizontal)
-                    
-                    if let errorMessage {
-                        Text(errorMessage)
-                            .foregroundStyle(.red)
-                            .mineOpsCaption()
-                            .padding()
-                    }
-                    
-                    Button {
-                        Task { await importNewScreenshots() }
-                    } label: {
-                        Label("Start Import", systemImage: "arrow.down.circle.fill")
-                            .font(.headline)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.accentCyan)
-                    .controlSize(.large)
                 }
+                .frame(maxWidth: .infinity)
+                .padding()
             }
-            .padding()
             .navigationTitle("Screenshot Import")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -142,6 +155,38 @@ struct ScreenshotImporterView: View {
                     }
                     .disabled(isProcessing)
                 }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    if !isProcessing, (!importedNames.isEmpty || !updatedNames.isEmpty || unchangedCount > 0 || skippedDuplicateCount > 0 || skippedNonGameCount > 0) {
+                        Button("Done") {
+                            dismiss()
+                        }
+                        .accessibilityIdentifier("screenshotImporterToolbarDoneButton")
+                    }
+                }
+
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button(role: .destructive) {
+                            showingResetConfirm = true
+                        } label: {
+                            Label("Reset Import History", systemImage: "arrow.counterclockwise")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .disabled(isProcessing)
+                    .accessibilityLabel("Import options")
+                }
+            }
+            .alert("Reset Import History?", isPresented: $showingResetConfirm) {
+                Button("Cancel", role: .cancel) {}
+                Button("Reset", role: .destructive) {
+                    ScreenshotsFetcher.shared.resetImportTracking()
+                    errorMessage = "Import history reset. Run import again to rescan screenshots."
+                }
+            } message: {
+                Text("This clears the app's record of which screenshots were already processed and will cause the next import to rescan.")
             }
         }
     }
@@ -152,6 +197,7 @@ struct ScreenshotImporterView: View {
         errorMessage = nil
         importedNames = []
         updatedNames = []
+        unchangedCount = 0
         skippedDuplicateCount = 0
         skippedNonGameCount = 0
         progressMessage = "Requesting photo library access..."
@@ -286,6 +332,7 @@ struct ScreenshotImporterView: View {
         updatedNames = mergeResult.updates.map { result in
             result.directoryMatch?.name ?? result.resolvedName
         }
+        unchangedCount = mergeResult.unchanged.count
         
         // Create snapshot
         if !processor.results.isEmpty {
@@ -294,5 +341,22 @@ struct ScreenshotImporterView: View {
         }
         
         isProcessing = false
+    }
+
+    @ViewBuilder
+    private func summaryPill(label: String, value: Int, systemImage: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .foregroundStyle(color)
+            Text("\(label): \(value)")
+                .mineOpsCaption()
+                .foregroundStyle(.white.opacity(0.85))
+        }
+        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .background(Color.mineDarkLight)
+        .clipShape(Capsule())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) \(value)")
     }
 }

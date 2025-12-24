@@ -9,7 +9,10 @@ struct MineOpsCompanionApp: App {
 
     init() {
         #if DEBUG
-        clearAllDataForTesting()
+        // Optional dev-only reset: launch with "--reset-data" to wipe local data.
+        if ProcessInfo.processInfo.arguments.contains("--reset-data") {
+            AppDataResetter.clearAllUserData()
+        }
         #endif
         IconStorage.ensureDirectories()
     }
@@ -28,52 +31,6 @@ struct MineOpsCompanionApp: App {
                     }
                 }
         }
-    }
-    
-    private func clearAllDataForTesting() {
-        let fm = FileManager.default
-        
-        // Clear Documents directory
-        if let docsURL = try? fm.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
-            let filesToDelete = [
-                "recognized_managers.json",
-                "image_hashes.json",
-                "import_snapshots.json"
-            ]
-            
-            for filename in filesToDelete {
-                let fileURL = docsURL.appendingPathComponent(filename)
-                try? fm.removeItem(at: fileURL)
-            }
-            
-            // Clear saved images
-            let imagesDir = docsURL.appendingPathComponent("Images", isDirectory: true)
-            try? fm.removeItem(at: imagesDir)
-            
-            // Clear harvested icons
-            let iconsDir = docsURL.appendingPathComponent("Icons", isDirectory: true)
-            try? fm.removeItem(at: iconsDir)
-        }
-        
-        // Clear Application Support directory
-        if let appSupportURL = try? fm.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false) {
-            // Remove entire app support directory and recreate
-            try? fm.removeItem(at: appSupportURL)
-            try? fm.createDirectory(at: appSupportURL, withIntermediateDirectories: true)
-        }
-        
-        // Clear UserDefaults (including calibration data)
-        if let bundleID = Bundle.main.bundleIdentifier {
-            UserDefaults.standard.removePersistentDomain(forName: bundleID)
-            UserDefaults.standard.synchronize()
-        }
-        
-        // Clear in-memory hash store
-        Task { @MainActor in
-            ImageHashStore.shared.clearAll()
-        }
-        
-        Logger.app.info("✅ Cleared all app data for testing build (Documents, App Support, UserDefaults, Hash Store)")
     }
     
     private func handleURLScheme(_ url: URL) {

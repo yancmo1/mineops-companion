@@ -14,7 +14,7 @@ public final class OCRReviewViewModel: ObservableObject {
     init(persistence: Persistence) {
         self.persistence = persistence
         self.directory = (try? SMDirectory.load()) ?? []
-        self.recognized = persistence.loadRecognized()
+        self.recognized = persistence.applyOverrides(to: persistence.loadRecognized())
     }
 
     /// Process OCR results from imported images.
@@ -71,19 +71,30 @@ public final class OCRReviewViewModel: ObservableObject {
         applyMerged(with: recognized)
     }
     
-    /// Replace the current roster and return info about what was updated vs new.
-    public func replaceAndTrackChanges(with incoming: [RecognizedSM]) -> (newImports: [RecognizedSM], updates: [RecognizedSM]) {
-        let existingKeys = Set(recognized.map { $0.identityKey })
-        let newImports = incoming.filter { !existingKeys.contains($0.identityKey) }
-        let updates = incoming.filter { existingKeys.contains($0.identityKey) }
+    /// Replace the current roster and return info about what was updated vs new vs unchanged.
+    public func replaceAndTrackChanges(with incoming: [RecognizedSM]) -> (newImports: [RecognizedSM], updates: [RecognizedSM], unchanged: [RecognizedSM]) {
+        let existingByKey: [String: RecognizedSM] = recognized.reduce(into: [:]) { partial, item in
+            partial[item.identityKey] = item
+        }
+
+        let newImports = incoming.filter { existingByKey[$0.identityKey] == nil }
+        let updates = incoming.filter {
+            guard let existing = existingByKey[$0.identityKey] else { return false }
+            return hasMeaningfulChanges(existing: existing, incoming: $0)
+        }
+        let unchanged = incoming.filter {
+            guard let existing = existingByKey[$0.identityKey] else { return false }
+            return !hasMeaningfulChanges(existing: existing, incoming: $0)
+        }
         
         applyMerged(with: incoming)
         
-        return (newImports, updates)
+        return (newImports, updates, unchanged)
     }
 
     public func delete(_ record: RecognizedSM) {
         recognized.removeAll { $0.id == record.id }
+        persistence.removeOverride(for: record.id)
         recognized = persistence.saveRecognized(recognized)
         
         // Remove hash from store
@@ -98,12 +109,14 @@ public final class OCRReviewViewModel: ObservableObject {
         recognized = recognized.map { current in
             current.id == record.id ? updated : current
         }
+        persistence.upsertOverride(original: record, updated: updated)
         recognized = persistence.saveRecognized(recognized)
     }
 
     private func applyMerged(with incoming: [RecognizedSM]) {
         let merged = merge(current: recognized, incoming: incoming)
-        recognized = persistence.saveRecognized(merged)
+        let withOverrides = persistence.applyOverrides(to: merged)
+        recognized = persistence.saveRecognized(withOverrides)
     }
 
     private func merge(current: [RecognizedSM], incoming: [RecognizedSM]) -> [RecognizedSM] {
@@ -115,7 +128,8 @@ public final class OCRReviewViewModel: ObservableObject {
 
         for item in incoming {
             if let existing = dictionary[item.identityKey] {
-                dictionary[item.identityKey] = item.updating(id: existing.id, storedImageName: existing.storedImageName)
+                let candidate = item.updating(id: existing.id, storedImageName: existing.storedImageName)
+                dictionary[item.identityKey] = hasMeaningfulChanges(existing: existing, incoming: item) ? candidate : existing
             } else {
                 dictionary[item.identityKey] = item
             }
@@ -124,5 +138,21 @@ public final class OCRReviewViewModel: ObservableObject {
         return dictionary.values.sorted { lhs, rhs in
             lhs.resolvedName.localizedCaseInsensitiveCompare(rhs.resolvedName) == .orderedAscending
         }
+    }
+
+    private func hasMeaningfulChanges(existing: RecognizedSM, incoming: RecognizedSM) -> Bool {
+        // Compare the parts of the model that should be updated by re-import.
+        // Intentionally ignores fields the user may manually edit (name/rarity/role/stars).
+        let existingDirectoryID = existing.directoryMatch?.id
+        let incomingDirectoryID = incoming.directoryMatch?.id
+
+        if existingDirectoryID != incomingDirectoryID { return true }
+        if existing.level != incoming.level { return true }
+        if existing.stats != incoming.stats { return true }
+        if existing.imageFingerprint != incoming.imageFingerprint { return true }
+        if existing.active != incoming.active { return true }
+        if existing.passive != incoming.passive { return true }
+        if existing.actions != incoming.actions { return true }
+        return false
     }
 }

@@ -6,13 +6,16 @@ struct StrategyPipelineView: View {
     
     // Persisted mine settings
     @State private var selectedMineType: MineType = MineSettingsStore.shared.selectedMineType
-    @State private var mainlandMineNumber: Int = MineSettingsStore.shared.mainlandMineNumber
+    @State private var mineNumber: Int = MineSettingsStore.shared.mineNumber(for: MineSettingsStore.shared.selectedMineType)
     @State private var selectedContinentMine: ContinentMine = .ruby
-    @State private var prestige: Int = 5
+    @State private var prestige: Int = 0
     @State private var maxShaft: Int = 30
     
     @State private var notes = ""
     @State private var selectedManagerIDs: Set<String> = []
+
+    @State private var showingSettings = false
+    @State private var editingNumber: EditingNumber?
     
     private let settingsStore = MineSettingsStore.shared
 
@@ -20,7 +23,12 @@ struct StrategyPipelineView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: MineOpsLayout.sectionSpacing) {
-                    CardContainer(title: "Mine Details", titleColor: .accentCyan) {
+                    CollapsibleCardContainer(
+                        title: "Mine Details",
+                        titleColor: .accentCyan,
+                        defaultExpanded: true,
+                        accessibilityIdentifier: "mineDetailsCard"
+                    ) {
                         VStack(alignment: .leading, spacing: 16) {
                             // Mine Type Picker
                             VStack(alignment: .leading, spacing: 8) {
@@ -37,29 +45,37 @@ struct StrategyPipelineView: View {
                                 .accessibilityIdentifier("mineTypePicker")
                             }
                             
-                            // Mainland: Number picker for mine progression
-                            if selectedMineType == .mainland {
+                            // Numbered progression mines (Mainland / Frontier)
+                            if selectedMineType.usesNumberedProgression {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("Mine Number")
                                         .font(.subheadline)
                                         .foregroundStyle(Color.white.opacity(0.7))
                                     HStack(spacing: 16) {
-                                        Button(action: { if mainlandMineNumber > 1 { mainlandMineNumber -= 1 } }) {
+                                        Button(action: { if mineNumber > 1 { mineNumber -= 1 } }) {
                                             Image(systemName: "minus.circle.fill")
                                                 .foregroundStyle(Color.accentCyan)
                                                 .font(.title2)
                                         }
-                                        Text("\(mainlandMineNumber)")
-                                            .foregroundStyle(Color.white)
-                                            .font(.title3.monospacedDigit())
-                                            .frame(minWidth: 60)
-                                        Button(action: { mainlandMineNumber += 1 }) {
+                                        Button {
+                                            editingNumber = .mineNumber
+                                        } label: {
+                                            Text("\(mineNumber)")
+                                                .foregroundStyle(Color.white)
+                                                .font(.title3.monospacedDigit())
+                                                .frame(minWidth: 60)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .accessibilityLabel("Edit mine number")
+                                        .accessibilityIdentifier("mineNumberValueButton")
+
+                                        Button(action: { mineNumber += 1 }) {
                                             Image(systemName: "plus.circle.fill")
                                                 .foregroundStyle(Color.accentCyan)
                                                 .font(.title2)
                                         }
                                     }
-                                    .accessibilityIdentifier("mainlandMineStepper")
+                                    .accessibilityIdentifier("mineNumberStepper")
                                 }
                             }
                             
@@ -97,10 +113,18 @@ struct StrategyPipelineView: View {
                                             .foregroundStyle(Color.accentCyan)
                                             .font(.title2)
                                     }
-                                    Text("\(prestige)")
-                                        .foregroundStyle(Color.white)
-                                        .font(.title3.monospacedDigit())
-                                        .frame(minWidth: 60)
+                                    Button {
+                                        editingNumber = .prestige
+                                    } label: {
+                                        Text("\(prestige)")
+                                            .foregroundStyle(Color.white)
+                                            .font(.title3.monospacedDigit())
+                                            .frame(minWidth: 60)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Edit prestige level")
+                                    .accessibilityIdentifier("prestigeValueButton")
+
                                     Button(action: { if prestige < 999 { prestige += 1 } }) {
                                         Image(systemName: "plus.circle.fill")
                                             .foregroundStyle(Color.accentCyan)
@@ -121,10 +145,18 @@ struct StrategyPipelineView: View {
                                             .foregroundStyle(Color.accentCyan)
                                             .font(.title2)
                                     }
-                                    Text("\(maxShaft)")
-                                        .foregroundStyle(Color.white)
-                                        .font(.title3.monospacedDigit())
-                                        .frame(minWidth: 60)
+                                    Button {
+                                        editingNumber = .maxShaft
+                                    } label: {
+                                        Text("\(maxShaft)")
+                                            .foregroundStyle(Color.white)
+                                            .font(.title3.monospacedDigit())
+                                            .frame(minWidth: 60)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Edit max shaft level")
+                                    .accessibilityIdentifier("maxShaftValueButton")
+
                                     Button(action: { if maxShaft < 999 { maxShaft += 1 } }) {
                                         Image(systemName: "plus.circle.fill")
                                             .foregroundStyle(Color.accentCyan)
@@ -144,7 +176,7 @@ struct StrategyPipelineView: View {
                         Task {
                             let mineContext = MineContext(
                                 type: selectedMineType,
-                                mainlandMineNumber: selectedMineType == .mainland ? mainlandMineNumber : nil,
+                                mainlandMineNumber: selectedMineType.usesNumberedProgression ? mineNumber : nil,
                                 continentMine: selectedMineType.continentMines != nil ? selectedContinentMine : nil,
                                 prestige: prestige,
                                 maxShaft: maxShaft
@@ -153,14 +185,19 @@ struct StrategyPipelineView: View {
                                 mineContext: mineContext,
                                 screenshots: [],
                                 notes: notes.isEmpty ? nil : notes,
-                                selectedManagers: selectedManagerNames
+                                selectedRoster: selectedRecognizedManagers
                             )
                         }
                     }
                     .disabled(pipeline.isAnalyzing || selectedManagerIDs.isEmpty)
                     .accessibilityIdentifier("runStrategyButton")
 
-                    CardContainer(title: "Select Managers", titleColor: .accentCyan) {
+                    CollapsibleCardContainer(
+                        title: "Select Managers",
+                        titleColor: .accentCyan,
+                        defaultExpanded: false,
+                        accessibilityIdentifier: "selectManagersCard"
+                    ) {
                         if managerOptions.isEmpty {
                             Text("Import super managers on the Manager tab before running an AI strategy.")
                                 .mineOpsBody()
@@ -211,7 +248,7 @@ struct StrategyPipelineView: View {
                     }
 
                     if let error = pipeline.lastError {
-                        CardContainer(title: "Error", titleColor: .accentCyan) {
+                        CollapsibleCardContainer(title: "Error", titleColor: .accentCyan, defaultExpanded: true) {
                             Text(error)
                                 .font(.footnote)
                                 .foregroundStyle(.red)
@@ -220,7 +257,7 @@ struct StrategyPipelineView: View {
                     }
 
                     if let strategy = pipeline.lastStrategy {
-                        CardContainer(title: strategy.comboName, titleColor: .accentCyan) {
+                        CollapsibleCardContainer(title: strategy.comboName, titleColor: .accentCyan, defaultExpanded: true) {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(strategy.strategySummary)
                                     .mineOpsBody()
@@ -238,7 +275,7 @@ struct StrategyPipelineView: View {
                             }
                         }
                         if let plan = strategy.detailedPlan, !plan.isEmpty {
-                            CardContainer(title: "Tactical Plan") {
+                            CollapsibleCardContainer(title: "Tactical Plan", defaultExpanded: true) {
                                 Text(plan)
                                     .mineOpsBody()
                                     .foregroundStyle(.white)
@@ -248,7 +285,7 @@ struct StrategyPipelineView: View {
                     }
 
                     if !pipeline.detectedManagers.isEmpty {
-                        CardContainer(title: "Detected Managers", titleColor: .accentCyan) {
+                        CollapsibleCardContainer(title: "Detected Managers", titleColor: .accentCyan, defaultExpanded: true) {
                             Text(pipeline.detectedManagers.joined(separator: ", "))
                                 .font(.footnote)
                                 .foregroundStyle(Color.accentCyan)
@@ -278,6 +315,16 @@ struct StrategyPipelineView: View {
             .navigationTitle("")
             .background(Color.mineDark.ignoresSafeArea())
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.2.fill")
+                            .foregroundStyle(Color.accentCyan)
+                    }
+                    .accessibilityLabel("Open settings")
+                    .accessibilityIdentifier("openSettingsButton")
+                }
                 ToolbarItem(placement: .principal) {
                     Text("AI Strategy")
                         .font(.title.bold())
@@ -285,11 +332,18 @@ struct StrategyPipelineView: View {
                         .accessibilityIdentifier("aiStrategyHeader")
                 }
             }
+            .sheet(isPresented: $showingSettings) {
+                MineOpsSettingsView()
+            }
             .task { seedSelectionIfNeeded() }
             .onChange(of: review.recognized) { _, _ in seedSelectionIfNeeded() }
             // Persist mine type selection
             .onChange(of: selectedMineType) { _, newType in
                 settingsStore.selectedMineType = newType
+
+                if newType.usesNumberedProgression {
+                    mineNumber = settingsStore.mineNumber(for: newType)
+                }
                 // Load stored continent mine for this mine type if applicable
                 if let mines = newType.continentMines {
                     selectedContinentMine = settingsStore.selectedContinentMine(for: newType)
@@ -302,8 +356,9 @@ struct StrategyPipelineView: View {
                 loadSettingsForCurrentMine()
             }
             // Persist individual settings
-            .onChange(of: mainlandMineNumber) { _, newValue in
-                settingsStore.mainlandMineNumber = newValue
+            .onChange(of: mineNumber) { _, newValue in
+                guard selectedMineType.usesNumberedProgression else { return }
+                settingsStore.setMineNumber(newValue, for: selectedMineType)
             }
             .onChange(of: selectedContinentMine) { _, newValue in
                 settingsStore.setSelectedContinentMine(newValue, for: selectedMineType)
@@ -321,7 +376,33 @@ struct StrategyPipelineView: View {
                 if selectedMineType.continentMines != nil {
                     selectedContinentMine = settingsStore.selectedContinentMine(for: selectedMineType)
                 }
+                if selectedMineType.usesNumberedProgression {
+                    mineNumber = settingsStore.mineNumber(for: selectedMineType)
+                }
                 loadSettingsForCurrentMine()
+            }
+            .sheet(item: $editingNumber) { item in
+                NumberEntrySheet(
+                    title: item.title,
+                    currentValue: {
+                        switch item {
+                        case .mineNumber: return mineNumber
+                        case .prestige: return prestige
+                        case .maxShaft: return maxShaft
+                        }
+                    }(),
+                    range: item.allowedRange,
+                    accessibilityIdentifier: item.accessibilityIdentifier
+                ) { newValue in
+                    switch item {
+                    case .mineNumber:
+                        mineNumber = newValue
+                    case .prestige:
+                        prestige = newValue
+                    case .maxShaft:
+                        maxShaft = newValue
+                    }
+                }
             }
         }
     }
@@ -361,6 +442,40 @@ struct StrategyPipelineView: View {
 }
 
 private extension StrategyPipelineView {
+    enum EditingNumber: Identifiable {
+        case mineNumber
+        case prestige
+        case maxShaft
+
+        var id: String { String(describing: self) }
+
+        var title: String {
+            switch self {
+            case .mineNumber: return "Mine Number"
+            case .prestige: return "Prestige Level"
+            case .maxShaft: return "Max Shaft Level"
+            }
+        }
+
+        var allowedRange: ClosedRange<Int> {
+            switch self {
+            case .mineNumber: return 1...999
+            case .prestige: return 0...999
+            case .maxShaft: return 1...999
+            }
+        }
+
+        var accessibilityIdentifier: String {
+            switch self {
+            case .mineNumber: return "mineNumberEntry"
+            case .prestige: return "prestigeEntry"
+            case .maxShaft: return "maxShaftEntry"
+            }
+        }
+    }
+}
+
+private extension StrategyPipelineView {
     struct ManagerOption: Identifiable {
         let id: String
         let name: String
@@ -389,5 +504,12 @@ private extension StrategyPipelineView {
         managerOptions
             .filter { selectedManagerIDs.contains($0.id) }
             .map { $0.name }
+    }
+
+    var selectedRecognizedManagers: [RecognizedSM] {
+        let ids = selectedManagerIDs
+        return review.recognized
+            .filter { ids.contains($0.identityKey) }
+            .sorted { $0.resolvedName.localizedCaseInsensitiveCompare($1.resolvedName) == .orderedAscending }
     }
 }

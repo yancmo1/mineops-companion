@@ -6,21 +6,27 @@ final class Persistence {
     static let shared = Persistence()
 
     private let storageURL: URL
+    private let overridesURL: URL
     private let imagesDirectoryURL: URL
     private let directory: [SMDirectoryEntry]
 
-    private init() {
+    private init(containerURLOverride: URL? = nil, directoryOverride: [SMDirectoryEntry]? = nil) {
         let fm = FileManager.default
         let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? fm.temporaryDirectory
-        let container = base.appendingPathComponent("MineOpsCompanion", isDirectory: true)
+        let container = (containerURLOverride ?? base.appendingPathComponent("MineOpsCompanion", isDirectory: true))
         let images = container.appendingPathComponent("Images", isDirectory: true)
 
         try? fm.createDirectory(at: container, withIntermediateDirectories: true)
         try? fm.createDirectory(at: images, withIntermediateDirectories: true)
 
         storageURL = container.appendingPathComponent("recognized_managers.json")
+        overridesURL = container.appendingPathComponent("recognized_overrides.json")
         imagesDirectoryURL = images
-        directory = (try? SMDirectory.load()) ?? []
+        directory = directoryOverride ?? (try? SMDirectory.load()) ?? []
+    }
+
+    static func makeForTesting(containerURL: URL, directory: [SMDirectoryEntry] = []) -> Persistence {
+        Persistence(containerURLOverride: containerURL, directoryOverride: directory)
     }
 
     func loadRecognized() -> [RecognizedSM] {
@@ -56,6 +62,44 @@ final class Persistence {
         .sorted { lhs, rhs in
             lhs.resolvedName.localizedCaseInsensitiveCompare(rhs.resolvedName) == .orderedAscending
         }
+    }
+
+    func applyOverrides(to recognized: [RecognizedSM]) -> [RecognizedSM] {
+        let overrides = loadOverridesByID()
+        guard !overrides.isEmpty else { return recognized }
+        return recognized.map { record in
+            guard let override = overrides[record.id] else { return record }
+            return record.applying(override: override)
+        }
+    }
+
+    func upsertOverride(from updated: RecognizedSM) {
+        // Deprecated: prefer upsertOverride(original:updated:) so we only persist what the user changed.
+        var overrides = loadOverrides()
+        overrides.removeAll { $0.id == updated.id }
+        overrides.append(StoredRecognizedSMOverride(from: updated))
+        saveOverrides(overrides)
+    }
+
+    func upsertOverride(original: RecognizedSM, updated: RecognizedSM) {
+        let override = StoredRecognizedSMOverride(original: original, updated: updated)
+        if override.isEffectivelyEmpty {
+            removeOverride(for: updated.id)
+            return
+        }
+
+        var overrides = loadOverrides()
+        overrides.removeAll { $0.id == updated.id }
+        overrides.append(override)
+        saveOverrides(overrides)
+    }
+
+    func removeOverride(for id: UUID) {
+        var overrides = loadOverrides()
+        let originalCount = overrides.count
+        overrides.removeAll { $0.id == id }
+        guard overrides.count != originalCount else { return }
+        saveOverrides(overrides)
     }
 
     func saveRecognized(_ recognized: [RecognizedSM]) -> [RecognizedSM] {
@@ -109,6 +153,20 @@ final class Persistence {
 
         return updated.sorted { lhs, rhs in
             lhs.resolvedName.localizedCaseInsensitiveCompare(rhs.resolvedName) == .orderedAscending
+        }
+    }
+
+    /// Clears all stored recognized managers, overrides, and saved images.
+    func clearRecognizedManagers() {
+        // Remove JSON files.
+        try? FileManager.default.removeItem(at: storageURL)
+        try? FileManager.default.removeItem(at: overridesURL)
+
+        // Remove saved images.
+        if let existing = try? FileManager.default.contentsOfDirectory(at: imagesDirectoryURL, includingPropertiesForKeys: nil) {
+            for url in existing {
+                try? FileManager.default.removeItem(at: url)
+            }
         }
     }
 
@@ -252,18 +310,21 @@ private struct StoredRecognizedSM: Codable {
         let effect: String?
         let multiplier: Double?
         let durationSeconds: Int?
+        let unlockedSlots: [Bool]?
 
         init(from passive: RecognizedSM.PassiveInfo) {
             self.effect = passive.effect
             self.multiplier = passive.multiplier
             self.durationSeconds = passive.durationSeconds
+            self.unlockedSlots = passive.unlockedSlots.isEmpty ? nil : passive.unlockedSlots
         }
 
         var asDomain: RecognizedSM.PassiveInfo {
             RecognizedSM.PassiveInfo(
                 effect: effect,
                 multiplier: multiplier,
-                durationSeconds: durationSeconds
+                durationSeconds: durationSeconds,
+                unlockedSlots: unlockedSlots ?? []
             )
         }
     }
@@ -286,6 +347,114 @@ private struct StoredRecognizedSM: Codable {
                 hasRankUp: hasRankUp
             )
         }
+    }
+}
+
+private struct StoredRecognizedSMOverride: Codable {
+    let id: UUID
+    let resolvedName: String?
+    let rarity: String?
+    let role: String?
+    let stars: Int?
+    let active: StoredRecognizedSM.StoredActiveInfo?
+    let passive: StoredRecognizedSM.StoredPassiveInfo?
+    let actions: StoredRecognizedSM.StoredActions?
+
+    init(from record: RecognizedSM) {
+        self.id = record.id
+        self.resolvedName = record.resolvedName
+        self.rarity = record.rarity
+        self.role = record.role
+        self.stars = record.stars
+        self.active = record.active.isEmpty ? nil : StoredRecognizedSM.StoredActiveInfo(from: record.active)
+        let passiveWithoutUnlockSlots = RecognizedSM.PassiveInfo(
+            effect: record.passive.effect,
+            multiplier: record.passive.multiplier,
+            durationSeconds: record.passive.durationSeconds,
+            unlockedSlots: []
+        )
+        self.passive = passiveWithoutUnlockSlots.isEmpty ? nil : StoredRecognizedSM.StoredPassiveInfo(from: passiveWithoutUnlockSlots)
+        self.actions = record.actions.isEmpty ? nil : StoredRecognizedSM.StoredActions(from: record.actions)
+    }
+
+    init(original: RecognizedSM, updated: RecognizedSM) {
+        self.id = updated.id
+
+        self.resolvedName = original.resolvedName != updated.resolvedName ? updated.resolvedName : nil
+        self.rarity = original.rarity != updated.rarity ? updated.rarity : nil
+        self.role = original.role != updated.role ? updated.role : nil
+        self.stars = original.stars != updated.stars ? updated.stars : nil
+
+        self.active = original.active != updated.active ? (updated.active.isEmpty ? nil : StoredRecognizedSM.StoredActiveInfo(from: updated.active)) : nil
+
+        let originalPassiveComparable = RecognizedSM.PassiveInfo(
+            effect: original.passive.effect,
+            multiplier: original.passive.multiplier,
+            durationSeconds: original.passive.durationSeconds,
+            unlockedSlots: []
+        )
+        let updatedPassiveComparable = RecognizedSM.PassiveInfo(
+            effect: updated.passive.effect,
+            multiplier: updated.passive.multiplier,
+            durationSeconds: updated.passive.durationSeconds,
+            unlockedSlots: []
+        )
+        self.passive = originalPassiveComparable != updatedPassiveComparable
+            ? (updatedPassiveComparable.isEmpty ? nil : StoredRecognizedSM.StoredPassiveInfo(from: updatedPassiveComparable))
+            : nil
+
+        self.actions = original.actions != updated.actions ? (updated.actions.isEmpty ? nil : StoredRecognizedSM.StoredActions(from: updated.actions)) : nil
+    }
+
+    var isEffectivelyEmpty: Bool {
+        resolvedName == nil && rarity == nil && role == nil && stars == nil && active == nil && passive == nil && actions == nil
+    }
+}
+
+private extension Persistence {
+    func loadOverrides() -> [StoredRecognizedSMOverride] {
+        guard let data = try? Data(contentsOf: overridesURL) else { return [] }
+        let decoder = JSONDecoder()
+        return (try? decoder.decode([StoredRecognizedSMOverride].self, from: data)) ?? []
+    }
+
+    func loadOverridesByID() -> [UUID: StoredRecognizedSMOverride] {
+        let overrides = loadOverrides()
+        guard !overrides.isEmpty else { return [:] }
+        return overrides.reduce(into: [:]) { partial, item in
+            partial[item.id] = item
+        }
+    }
+
+    func saveOverrides(_ overrides: [StoredRecognizedSMOverride]) {
+        let encoder = JSONEncoder()
+        guard let data = try? encoder.encode(overrides) else { return }
+        try? data.write(to: overridesURL, options: .atomic)
+    }
+}
+
+private extension RecognizedSM {
+    func applying(override stored: StoredRecognizedSMOverride) -> RecognizedSM {
+        let activeOverride = stored.active?.asDomain ?? active
+        let passiveOverride: RecognizedSM.PassiveInfo = {
+            guard let override = stored.passive?.asDomain else { return passive }
+            return RecognizedSM.PassiveInfo(
+                effect: override.effect,
+                multiplier: override.multiplier,
+                durationSeconds: override.durationSeconds,
+                unlockedSlots: passive.unlockedSlots
+            )
+        }()
+
+        return updatingMetadata(
+            resolvedName: stored.resolvedName ?? resolvedName,
+            rarity: stored.rarity ?? rarity,
+            role: stored.role ?? role,
+            stars: stored.stars ?? stars,
+            active: activeOverride,
+            passive: passiveOverride,
+            actions: stored.actions?.asDomain ?? actions
+        )
     }
 }
 

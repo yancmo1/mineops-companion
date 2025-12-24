@@ -7,6 +7,9 @@ enum MineType: String, CaseIterable, Identifiable, Codable {
     // Main progression
     case mainland = "Mainland"
     
+    // Frontier progression
+    case frontier = "Frontier Mine"
+    
     // Continents (each has 5 themed mines: Coal, Gold, Ruby, Sapphire, then a special one)
     case start = "Start Continent"        // Obsidian
     case ice = "Ice Continent"            // Ice
@@ -25,7 +28,7 @@ enum MineType: String, CaseIterable, Identifiable, Codable {
     
     /// Whether this mine type uses numbered progression (Mainland) vs named mines (Continents)
     var usesNumberedProgression: Bool {
-        self == .mainland
+        self == .mainland || self == .frontier
     }
     
     /// The themed mines available on each continent
@@ -109,6 +112,11 @@ struct MineContext: Codable, Hashable {
                 return "Mainland Mine \(num)"
             }
             return "Mainland"
+        case .frontier:
+            if let num = mainlandMineNumber {
+                return "Frontier Mine \(num)"
+            }
+            return "Frontier Mine"
         case .event, .impossible, .expedition:
             return type.rawValue
         default:
@@ -127,6 +135,11 @@ struct MineContext: Codable, Hashable {
                 return "Mainland Mine \(num) (Prestige \(prestige), Max Shaft \(maxShaft))"
             }
             return "Mainland (Prestige \(prestige), Max Shaft \(maxShaft))"
+        case .frontier:
+            if let num = mainlandMineNumber {
+                return "Frontier Mine \(num) (Prestige \(prestige), Max Shaft \(maxShaft))"
+            }
+            return "Frontier Mine (Prestige \(prestige), Max Shaft \(maxShaft))"
         default:
             return "\(displayName) (Prestige \(prestige), Max Shaft \(maxShaft))"
         }
@@ -138,6 +151,9 @@ struct MineContext: Codable, Hashable {
         case .mainland:
             let mineNum = mainlandMineNumber ?? 1
             return "mainland_\(mineNum)_p\(prestige)_s\(maxShaft)"
+        case .frontier:
+            let mineNum = mainlandMineNumber ?? 1
+            return "frontier_\(mineNum)_p\(prestige)_s\(maxShaft)"
         default:
             if let mine = continentMine {
                 return "\(typeKey)_\(mine.rawValue.lowercased())_p\(prestige)_s\(maxShaft)"

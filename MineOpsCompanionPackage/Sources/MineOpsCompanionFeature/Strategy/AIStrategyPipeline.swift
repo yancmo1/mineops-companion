@@ -1,6 +1,7 @@
 import CoreData
 import CryptoKit
 import Foundation
+import OSLog
 import SwiftUI
 import UIKit
 
@@ -24,7 +25,7 @@ final class AIStrategyPipeline: ObservableObject {
         mineContext: MineContext,
         screenshots: [UIImage],
         notes: String?,
-        selectedManagers: [String]
+        selectedRoster: [RecognizedSM]
     ) async {
         isAnalyzing = true
         lastError = nil
@@ -46,36 +47,56 @@ final class AIStrategyPipeline: ObservableObject {
             CoreDataManager.shared.saveContext()
         }
 
-        var roster = selectedManagers
-        if roster.isEmpty {
+        let selected = selectedRoster
+        if selected.isEmpty {
             let names = await detectManagers(from: screenshots)
-            roster = names
+            detectedManagers = names
         } else {
-            roster = selectedManagers
+            detectedManagers = selected.map { $0.resolvedName }.sorted()
         }
 
-        roster = Array(Set(roster)).sorted()
-        detectedManagers = roster
-
-        guard !roster.isEmpty else {
+        guard !detectedManagers.isEmpty else {
             lastError = "Select at least one manager before generating a strategy."
             return
         }
 
         do {
-            let directory = (try? SMDirectory.load()) ?? []
-            let managerRoster = roster.map { name -> ManagerRosterEntry in
-                // Try to find department from directory by name or alias
-                let lowercaseName = name.lowercased()
-                if let entry = directory.first(where: { entry in
-                    entry.name.lowercased() == lowercaseName || 
-                    (entry.aliases?.contains(where: { $0.lowercased() == lowercaseName }) ?? false)
-                }) {
-                    return ManagerRosterEntry(name: entry.name, department: entry.department.capitalized)
-                } else {
-                    // Unknown manager - mark as unknown so AI doesn't make wrong assumptions
-                    print("⚠️ Unknown manager '\(name)' - marking department as unknown")
-                    return ManagerRosterEntry(name: name, department: "Unknown")
+            let managerRoster: [StrategyRosterExportEntry]
+            if !selected.isEmpty {
+                managerRoster = selected
+                    .map(StrategyRosterExportEntry.init(from:))
+                    .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            } else {
+                // Fallback: we only have names from vision detection.
+                let directory = (try? SMDirectory.load()) ?? []
+                managerRoster = detectedManagers.map { name in
+                    let lowercaseName = name.lowercased()
+                    if let entry = directory.first(where: { entry in
+                        entry.name.lowercased() == lowercaseName ||
+                        (entry.aliases?.contains(where: { $0.lowercased() == lowercaseName }) ?? false)
+                    }) {
+                        // Create a minimal entry (no stats).
+                        let stub = RecognizedSM(
+                            sourceImage: UIImage(),
+                            rawText: "",
+                            level: nil,
+                            directoryMatch: entry,
+                            resolvedName: entry.name,
+                            stats: SMStats()
+                        )
+                        return StrategyRosterExportEntry(from: stub)
+                    } else {
+                        Logger.strategy.warning("Unknown manager '\(name, privacy: .public)' - marking department as unknown")
+                        let stub = RecognizedSM(
+                            sourceImage: UIImage(),
+                            rawText: "",
+                            level: nil,
+                            directoryMatch: nil,
+                            resolvedName: name,
+                            stats: SMStats()
+                        )
+                        return StrategyRosterExportEntry(from: stub)
+                    }
                 }
             }
             
@@ -105,7 +126,7 @@ final class AIStrategyPipeline: ObservableObject {
     }
 
     func clearAllCaches() {
-        ["CachedStrategy", "CachedDetection"].forEach { entityName in
+        ["CachedStrategy"].forEach { entityName in
             let fetch = NSFetchRequest<NSFetchRequestResult>(entityName: entityName)
             let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetch)
             _ = try? context.execute(deleteRequest)
@@ -113,9 +134,7 @@ final class AIStrategyPipeline: ObservableObject {
         CoreDataManager.shared.saveContext()
         detectedManagers = []
         lastStrategy = nil
-        Task {
-            await AIStrategyEngine.shared.clearCache()
-        }
+        Task { await ManagerDetectionCache.shared.clear() }
     }
 
     // MARK: - Detection
@@ -126,14 +145,14 @@ final class AIStrategyPipeline: ObservableObject {
         for image in screenshots {
             guard let data = image.pngData() else { continue }
             let hash = Self.hash(data)
-            if let cached = fetchDetection(hash: hash), let name = cached.managerName {
+            if let name = await ManagerDetectionCache.shared.loadName(for: hash) {
                 names.append(name)
                 continue
             }
 
             if let name = try? await requestDetection(for: data) {
                 names.append(name)
-                storeDetection(hash: hash, name: name)
+                await ManagerDetectionCache.shared.storeName(name, for: hash)
             }
         }
 
@@ -141,7 +160,7 @@ final class AIStrategyPipeline: ObservableObject {
     }
 
     private func requestDetection(for imageData: Data) async throws -> String? {
-        guard let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"], !apiKey.isEmpty else {
+        guard let apiKey = await OpenAIKeyStore.shared.resolvedAPIKey(), !apiKey.isEmpty else {
             throw AIStrategyEngine.StrategyError.missingAPIKey
         }
 
@@ -223,21 +242,6 @@ final class AIStrategyPipeline: ObservableObject {
         } else {
             entity.strategyJSON = nil
         }
-        entity.timestamp = Date()
-        CoreDataManager.shared.saveContext()
-    }
-
-    private func fetchDetection(hash: String) -> CachedDetectionEntity? {
-        let request = NSFetchRequest<CachedDetectionEntity>(entityName: "CachedDetection")
-        request.fetchLimit = 1
-        request.predicate = NSPredicate(format: "imageHash == %@", hash)
-        return try? context.fetch(request).first
-    }
-
-    private func storeDetection(hash: String, name: String) {
-        let entity = CachedDetectionEntity(context: context)
-        entity.imageHash = hash
-        entity.managerName = name
         entity.timestamp = Date()
         CoreDataManager.shared.saveContext()
     }

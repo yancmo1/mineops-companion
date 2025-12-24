@@ -12,9 +12,9 @@ public final class OCRProcessor: ObservableObject {
     public init() {}
 
     public func processImages(_ images: [UIImage]) async {
-        for image in images {
+        for (index, image) in images.enumerated() {
             guard let cgImage = image.cgImage else { continue }
-            let text = await Self.recognizeText(from: cgImage)
+            let text = await OCRTextRecognizer.recognizeText(from: cgImage)
             
             // Validate that this looks like a Super Manager card
             let validation = SMCardValidator.validate(ocrText: text)
@@ -25,6 +25,10 @@ public final class OCRProcessor: ObservableObject {
             }
             
             print("✅ Valid SM card detected: \(validation.summary)")
+
+            // New approach: extract and OCR the "blue pill" tokens in the bottom panel.
+            // This improves reliability for durations and numeric values (e.g. `5m`, `30m`, `8.08x`, `-14.5%`).
+            let pillExtraction = await SMCardPillExtractor.extract(from: cgImage)
             
             let stats = SMStatsParser.parse(text: text)
             let level = stats.level?.current ?? OCRLevelParser.parse(from: text)
@@ -32,6 +36,22 @@ public final class OCRProcessor: ObservableObject {
             let displayName = match?.name ?? OCRTextHeuristics.guessDisplayName(from: text)
             let fields = OCRFieldExtraction.extract(from: text)
             let fingerprint = ImageHasher.fingerprint(for: image)
+
+            // Debug-only: run V2 pill extraction in parallel with legacy and log a diff.
+            if FeatureFlags.newPillExtractionV2Enabled {
+                let v2 = await SMCardPillExtractor.extractV2(from: cgImage)
+                let screenshotID = fingerprint?.perceptualHash ?? "img_\(index + 1)_\(Int(Date().timeIntervalSince1970))"
+                PillDiffLogger.log(screenshotID: screenshotID, timestamp: .now, legacy: pillExtraction, v2: v2)
+            }
+
+            // Detect passive ability unlock status using color analysis
+            let passiveStatuses = AbilityDetector.detectPassives(in: image)
+            let unlockedSlots = passiveStatuses.map { $0.isUnlocked }
+
+            let mergedActiveMultiplier = pillExtraction.activeMultiplier ?? fields.activeMultiplier
+            let mergedActiveDuration = pillExtraction.activeDurationSeconds ?? fields.activeDurationSeconds
+            let mergedActiveCooldown = pillExtraction.activeCooldownSeconds ?? fields.activeCooldownSeconds
+            let mergedPassiveMultiplier = pillExtraction.passiveMultiplier ?? fields.passiveMultiplier
 
             let recognized = RecognizedSM(
                 sourceImage: image,
@@ -46,14 +66,15 @@ public final class OCRProcessor: ObservableObject {
                 stars: fields.stars,
                 active: RecognizedSM.ActiveInfo(
                     effect: fields.activeEffect,
-                    multiplier: fields.activeMultiplier,
-                    durationSeconds: fields.activeDurationSeconds,
-                    cooldownSeconds: fields.activeCooldownSeconds
+                    multiplier: mergedActiveMultiplier,
+                    durationSeconds: mergedActiveDuration,
+                    cooldownSeconds: mergedActiveCooldown
                 ),
                 passive: RecognizedSM.PassiveInfo(
                     effect: fields.passiveEffect,
-                    multiplier: fields.passiveMultiplier,
-                    durationSeconds: fields.passiveDurationSeconds
+                    multiplier: mergedPassiveMultiplier,
+                    durationSeconds: fields.passiveDurationSeconds,
+                    unlockedSlots: unlockedSlots
                 ),
                 actions: RecognizedSM.ActionFlags(
                     hasLevelUp: fields.hasLevelUp,
@@ -62,7 +83,19 @@ public final class OCRProcessor: ObservableObject {
                 )
             )
 
-            upsert(recognized)
+            // Important: Do NOT upsert/deduplicate here.
+            // Import flows often process multiple screenshots in a single batch, and OCR/name matching
+            // can be wrong for one or more images. Upserting here can collapse distinct cards into one.
+            // Dedup/merge should happen at the import/review layer using stronger signals.
+            results.append(recognized)
+
+            #if DEBUG
+            let keyPreview = String(recognized.identityKey.prefix(28))
+            let digestPreview = fingerprint?.pixelDigest.map { String($0.prefix(8)) } ?? "nil"
+            let phashPreview = fingerprint.map { String($0.perceptualHash.prefix(8)) } ?? "nil"
+            let dirID = match?.id ?? "nil"
+            print("🧩 OCRProcessor[\(index + 1)/\(images.count)] key=\(keyPreview) dir=\(dirID) pixel=\(digestPreview) phash=\(phashPreview)")
+            #endif
         }
     }
 
@@ -71,34 +104,5 @@ public final class OCRProcessor: ObservableObject {
         skippedCount = 0
     }
 
-    private nonisolated static func recognizeText(from cgImage: CGImage) async -> String {
-        await withCheckedContinuation { continuation in
-            Task.detached(priority: .userInitiated) {
-                var recognizedText = ""
-                let request = VNRecognizeTextRequest { req, _ in
-                    guard let observations = req.results as? [VNRecognizedTextObservation] else { return }
-                    let lines = observations.compactMap { $0.topCandidates(1).first?.string }
-                    recognizedText = lines.joined(separator: "\n")
-                }
-                request.recognitionLevel = .accurate
-                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-                do {
-                    try handler.perform([request])
-                    continuation.resume(returning: recognizedText)
-                } catch {
-                    continuation.resume(returning: recognizedText)
-                }
-            }
-        }
-    }
-
-
-    private func upsert(_ recognized: RecognizedSM) {
-        if let index = results.firstIndex(where: { $0.identityKey == recognized.identityKey }) {
-            let existing = results[index]
-            results[index] = recognized.updating(id: existing.id, storedImageName: existing.storedImageName)
-        } else {
-            results.append(recognized)
-        }
-    }
+    // Intentionally no local upsert/dedup in OCRProcessor.
 }
