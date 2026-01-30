@@ -17,7 +17,7 @@ enum MineType: String, CaseIterable, Identifiable, Codable {
     case dawn = "Dawn Continent"          // Heliodor, Realgar, Alexandrite, Celestine, Titanite
     case dusk = "Dusk Continent"          // Fluorite, Quartz, Aragonite, Beryl, Calcite
     case ancient = "Ancient Continent"    // Aquamarine, Ammolite, Azurite, Pearl, Turquoise
-    case desert = "Lost Desert"           // Crysoberyl, Labradorite, Aventurine, Jasper, Carnelian
+    case desert = "Lost Desert"           // Chrysoberyl, Labradorite, Aventurine, Jasper, Carnelian
     
     // Special mines
     case event = "Event Mine"
@@ -47,7 +47,7 @@ enum MineType: String, CaseIterable, Identifiable, Codable {
         case .ancient:
             return [.aquamarine, .ammolite, .azurite, .pearl, .turquoise]
         case .desert:
-            return [.crysoberyl, .labradorite, .aventurine, .jasper, .carnelian]
+            return [.chrysoberyl, .labradorite, .aventurine, .jasper, .carnelian]
         default:
             return nil
         }
@@ -99,7 +99,7 @@ enum ContinentMine: String, CaseIterable, Identifiable, Codable {
     case turquoise = "Turquoise"
     
     // Desert Continent mines
-    case crysoberyl = "Crysoberyl"
+    case chrysoberyl = "Chrysoberyl"
     case labradorite = "Labradorite"
     case aventurine = "Aventurine"
     case jasper = "Jasper"
