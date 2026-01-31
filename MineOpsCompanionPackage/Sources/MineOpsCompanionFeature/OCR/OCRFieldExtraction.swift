@@ -8,9 +8,13 @@ struct OCRFieldExtraction {
     let activeMultiplier: Double?
     let activeDurationSeconds: Int?
     let activeCooldownSeconds: Int?
+    let activeValue: Double?
+    let activeUnit: RecognizedSM.StatUnit?
     let passiveEffect: String?
     let passiveMultiplier: Double?
     let passiveDurationSeconds: Int?
+    /// Up to 3 passive values found in-order in the Passive section (supports both `x` and `%`).
+    let passiveValues: [(value: Double, unit: RecognizedSM.StatUnit)]
     let hasLevelUp: Bool
     let hasPromote: Bool
     let hasRankUp: Bool
@@ -31,8 +35,11 @@ struct OCRFieldExtraction {
         let activeEffect = Self.effectDescription(from: activeSection)
         let passiveEffect = Self.effectDescription(from: passiveSection)
 
-        let activeMultiplier = Self.firstMultiplier(in: activeSection)
-        let passiveMultiplier = Self.firstMultiplier(in: passiveSection)
+        let activeTyped = Self.firstStatValue(in: activeSection)
+        let passiveTyped = Self.statValues(in: passiveSection, limit: 3)
+
+        let activeMultiplier = (activeTyped?.unit == .x) ? activeTyped?.value : nil
+        let passiveMultiplier = (passiveTyped.first?.unit == .x) ? passiveTyped.first?.value : nil
 
         let activeDurationSeconds = Self.firstDuration(in: activeSection)
         let passiveDurationSeconds = Self.firstDuration(in: passiveSection)
@@ -51,9 +58,12 @@ struct OCRFieldExtraction {
             activeMultiplier: activeMultiplier,
             activeDurationSeconds: activeDurationSeconds,
             activeCooldownSeconds: activeCooldownSeconds,
+            activeValue: activeTyped?.value,
+            activeUnit: activeTyped?.unit,
             passiveEffect: passiveEffect,
             passiveMultiplier: passiveMultiplier,
             passiveDurationSeconds: passiveDurationSeconds,
+            passiveValues: passiveTyped,
             hasLevelUp: hasLevelUp,
             hasPromote: hasPromote,
             hasRankUp: hasRankUp
@@ -104,11 +114,40 @@ struct OCRFieldExtraction {
         return cleaned.isEmpty ? nil : cleaned
     }
 
-    private static func firstMultiplier(in section: String) -> Double? {
+    private static func firstStatValue(in section: String) -> (value: Double, unit: RecognizedSM.StatUnit)? {
         guard !section.isEmpty else { return nil }
-        let pattern = #"([0-9]{1,4}(?:\.[0-9]+)?)\s*x"#
-        guard let match = match(in: section, pattern: pattern) else { return nil }
-        return Double(match)
+        // Prefer `x` and `%` values; allow negative values.
+        let pattern = #"(-?[0-9]{1,4}(?:\.[0-9]+)?)\s*(x|%)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
+        let range = NSRange(section.startIndex..<section.endIndex, in: section)
+        guard let match = regex.firstMatch(in: section, options: [], range: range) else { return nil }
+        guard let valueRange = Range(match.range(at: 1), in: section) else { return nil }
+        guard let unitRange = Range(match.range(at: 2), in: section) else { return nil }
+        let value = Double(section[valueRange])
+        let unitToken = section[unitRange].lowercased()
+        guard let value else { return nil }
+        let unit: RecognizedSM.StatUnit = (unitToken == "%") ? .percent : .x
+        return (value: value, unit: unit)
+    }
+
+    private static func statValues(in section: String, limit: Int) -> [(value: Double, unit: RecognizedSM.StatUnit)] {
+        guard !section.isEmpty, limit > 0 else { return [] }
+        let pattern = #"(-?[0-9]{1,4}(?:\.[0-9]+)?)\s*(x|%)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return [] }
+        let range = NSRange(section.startIndex..<section.endIndex, in: section)
+        let matches = regex.matches(in: section, options: [], range: range)
+        var results: [(value: Double, unit: RecognizedSM.StatUnit)] = []
+        results.reserveCapacity(min(matches.count, limit))
+        for match in matches {
+            guard results.count < limit else { break }
+            guard let valueRange = Range(match.range(at: 1), in: section) else { continue }
+            guard let unitRange = Range(match.range(at: 2), in: section) else { continue }
+            guard let value = Double(section[valueRange]) else { continue }
+            let unitToken = section[unitRange].lowercased()
+            let unit: RecognizedSM.StatUnit = (unitToken == "%") ? .percent : .x
+            results.append((value: value, unit: unit))
+        }
+        return results
     }
 
     private static func firstDuration(in section: String) -> Int? {

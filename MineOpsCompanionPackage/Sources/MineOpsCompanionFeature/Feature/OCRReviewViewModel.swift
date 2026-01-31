@@ -27,11 +27,40 @@ public final class OCRReviewViewModel: ObservableObject {
             let fields = OCRFieldExtraction.extract(from: text)
 
             let imageFingerprint = ImageHasher.fingerprint(for: image)
-            
+
             // Detect passive ability unlock status using color analysis
             let passiveStatuses = AbilityDetector.detectPassives(in: image)
             let unlockedSlots = passiveStatuses.map { $0.isUnlocked }
-            
+
+            let activeEffectValue: RecognizedSM.ActiveEffect? = {
+                guard let value = fields.activeValue, let unit = fields.activeUnit else { return nil }
+                return RecognizedSM.ActiveEffect(value: value, unit: unit)
+            }()
+
+            let passiveSlots: [RecognizedSM.StatSlot] = {
+                // Map detected slot statuses to unlocked/locked/absent, and attach parsed values when present.
+                // If the detector returns fewer than 3 statuses, treat the remaining slots as absent.
+                var slots: [RecognizedSM.StatSlot] = []
+                slots.reserveCapacity(3)
+                for idx in 0..<3 {
+                    let slotNumber = idx + 1
+                    let state: RecognizedSM.StatState
+                    if idx >= passiveStatuses.count {
+                        state = .absent
+                    } else {
+                        state = passiveStatuses[idx].isUnlocked ? .unlocked : .locked
+                    }
+
+                    if idx < fields.passiveValues.count {
+                        let typed = fields.passiveValues[idx]
+                        slots.append(.init(slot: slotNumber, state: state, value: typed.value, unit: typed.unit))
+                    } else {
+                        slots.append(.init(slot: slotNumber, state: state))
+                    }
+                }
+                return slots
+            }()
+
             return RecognizedSM(
                 sourceImage: image,
                 rawText: text,
@@ -46,6 +75,7 @@ public final class OCRReviewViewModel: ObservableObject {
                 active: RecognizedSM.ActiveInfo(
                     effect: fields.activeEffect,
                     multiplier: fields.activeMultiplier,
+                    effectValue: activeEffectValue,
                     durationSeconds: fields.activeDurationSeconds,
                     cooldownSeconds: fields.activeCooldownSeconds
                 ),
@@ -53,7 +83,8 @@ public final class OCRReviewViewModel: ObservableObject {
                     effect: fields.passiveEffect,
                     multiplier: fields.passiveMultiplier,
                     durationSeconds: fields.passiveDurationSeconds,
-                    unlockedSlots: unlockedSlots
+                    unlockedSlots: unlockedSlots,
+                    slots: passiveSlots
                 ),
                 actions: RecognizedSM.ActionFlags(
                     hasLevelUp: fields.hasLevelUp,

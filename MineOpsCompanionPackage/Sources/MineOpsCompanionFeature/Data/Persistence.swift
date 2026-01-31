@@ -286,12 +286,14 @@ private struct StoredRecognizedSM: Codable {
     struct StoredActiveInfo: Codable {
         let effect: String?
         let multiplier: Double?
+        let effectValue: RecognizedSM.ActiveEffect?
         let durationSeconds: Int?
         let cooldownSeconds: Int?
 
         init(from active: RecognizedSM.ActiveInfo) {
             self.effect = active.effect
             self.multiplier = active.multiplier
+            self.effectValue = active.effectValue
             self.durationSeconds = active.durationSeconds
             self.cooldownSeconds = active.cooldownSeconds
         }
@@ -300,6 +302,7 @@ private struct StoredRecognizedSM: Codable {
             RecognizedSM.ActiveInfo(
                 effect: effect,
                 multiplier: multiplier,
+                effectValue: effectValue,
                 durationSeconds: durationSeconds,
                 cooldownSeconds: cooldownSeconds
             )
@@ -311,12 +314,14 @@ private struct StoredRecognizedSM: Codable {
         let multiplier: Double?
         let durationSeconds: Int?
         let unlockedSlots: [Bool]?
+        let slots: [RecognizedSM.StatSlot]?
 
         init(from passive: RecognizedSM.PassiveInfo) {
             self.effect = passive.effect
             self.multiplier = passive.multiplier
             self.durationSeconds = passive.durationSeconds
             self.unlockedSlots = passive.unlockedSlots.isEmpty ? nil : passive.unlockedSlots
+            self.slots = passive.slots.isEmpty ? nil : passive.slots
         }
 
         var asDomain: RecognizedSM.PassiveInfo {
@@ -324,7 +329,8 @@ private struct StoredRecognizedSM: Codable {
                 effect: effect,
                 multiplier: multiplier,
                 durationSeconds: durationSeconds,
-                unlockedSlots: unlockedSlots ?? []
+                unlockedSlots: unlockedSlots ?? [],
+                slots: slots ?? []
             )
         }
     }

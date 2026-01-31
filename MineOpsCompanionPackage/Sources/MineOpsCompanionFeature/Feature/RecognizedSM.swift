@@ -18,40 +18,106 @@ public struct RecognizedSM: Identifiable, Hashable {
   public let passive: PassiveInfo
   public let actions: ActionFlags
 
+  public enum StatUnit: String, Codable, Hashable {
+    case x
+    case percent
+  }
+
+  public enum StatState: String, Codable, Hashable {
+    case unlocked
+    case locked
+    case absent
+  }
+
+  public struct StatSlot: Codable, Hashable {
+    public let slot: Int
+    public let state: StatState
+    public let value: Double?
+    public let unit: StatUnit?
+
+    public init(slot: Int, state: StatState, value: Double? = nil, unit: StatUnit? = nil) {
+      self.slot = slot
+      self.state = state
+      self.value = value
+      self.unit = unit
+    }
+  }
+
+  public struct ActiveEffect: Codable, Hashable {
+    public let value: Double
+    public let unit: StatUnit
+
+    public init(value: Double, unit: StatUnit) {
+      self.value = value
+      self.unit = unit
+    }
+  }
+
   public struct ActiveInfo: Hashable, Codable {
+    /// Human-readable effect description (best-effort from OCR).
     public let effect: String?
+
+    /// Back-compat: when the active effect is an `x` multiplier, this is populated.
     public let multiplier: Double?
+
+    /// New: the active effect as a typed value (supports both `x` and `%`).
+    public let effectValue: ActiveEffect?
+
     public let durationSeconds: Int?
     public let cooldownSeconds: Int?
 
-    public init(effect: String? = nil, multiplier: Double? = nil, durationSeconds: Int? = nil, cooldownSeconds: Int? = nil) {
+    public init(
+      effect: String? = nil,
+      multiplier: Double? = nil,
+      effectValue: ActiveEffect? = nil,
+      durationSeconds: Int? = nil,
+      cooldownSeconds: Int? = nil
+    ) {
       self.effect = effect
       self.multiplier = multiplier
+      self.effectValue = effectValue
       self.durationSeconds = durationSeconds
       self.cooldownSeconds = cooldownSeconds
     }
 
     var isEmpty: Bool {
-      effect == nil && multiplier == nil && durationSeconds == nil && cooldownSeconds == nil
+      effect == nil && multiplier == nil && effectValue == nil && durationSeconds == nil && cooldownSeconds == nil
     }
   }
 
   public struct PassiveInfo: Hashable, Codable {
+    /// Human-readable effect description (best-effort from OCR).
     public let effect: String?
+
+    /// Back-compat: when the primary passive is an `x` multiplier, this is populated.
     public let multiplier: Double?
+
     public let durationSeconds: Int?
+
     /// Status of the 3 passive ability slots (top, middle, bottom). True = unlocked/colorized, false = locked/gray.
+    /// Note: a locked slot may still have a *visible* numeric value on the card.
     public let unlockedSlots: [Bool]
 
-    public init(effect: String? = nil, multiplier: Double? = nil, durationSeconds: Int? = nil, unlockedSlots: [Bool] = []) {
+    /// New: per-slot typed values and states (unlocked / locked / absent).
+    /// Always store up to 3 slots when possible.
+    public let slots: [StatSlot]
+
+    public init(
+      effect: String? = nil,
+      multiplier: Double? = nil,
+      durationSeconds: Int? = nil,
+      unlockedSlots: [Bool] = [],
+      slots: [StatSlot] = []
+    ) {
       self.effect = effect
       self.multiplier = multiplier
       self.durationSeconds = durationSeconds
       self.unlockedSlots = unlockedSlots
+      self.slots = slots
     }
 
     var isEmpty: Bool {
-      effect == nil && multiplier == nil && durationSeconds == nil && unlockedSlots.isEmpty
+      effect == nil && multiplier == nil && durationSeconds == nil && unlockedSlots.isEmpty && slots.isEmpty
     }
   }
 
@@ -127,6 +193,14 @@ public struct RecognizedSM: Identifiable, Hashable {
   }
 
   public var primaryBoostString: String {
+    if let typed = active.effectValue {
+      switch typed.unit {
+      case .percent:
+        return Self.percentString(fromPercentValue: typed.value)
+      case .x:
+        return Self.percentString(fromMultiplier: typed.value)
+      }
+    }
     if let value = active.multiplier {
       return Self.percentString(fromMultiplier: value)
     }
@@ -140,9 +214,23 @@ public struct RecognizedSM: Identifiable, Hashable {
   }
 
   public var secondaryBoostString: String? {
+    if let slot1 = passive.slots.first(where: { $0.slot == 1 }),
+       slot1.state != .absent,
+       let value = slot1.value,
+       let unit = slot1.unit {
+      switch unit {
+      case .percent:
+        return Self.percentString(fromPercentValue: value)
+      case .x:
+        return Self.percentString(fromMultiplier: value)
+      }
+    }
+
+    // Back-compat fallback.
     if let value = passive.multiplier {
       return Self.percentString(fromMultiplier: value)
     }
+
     return stats.secondaryBoostDisplay
   }
 
@@ -169,6 +257,14 @@ public struct RecognizedSM: Identifiable, Hashable {
       return String(format: "+%.0f%%", percent.rounded())
     }
     return String(format: "%.0f%%", percent.rounded())
+  }
+
+  private static func percentString(fromPercentValue value: Double) -> String {
+    if value == 0 { return "0%" }
+    if value > 0 {
+      return String(format: "+%.0f%%", value.rounded())
+    }
+    return String(format: "%.0f%%", value.rounded())
   }
 
   public static func == (lhs: RecognizedSM, rhs: RecognizedSM) -> Bool {
