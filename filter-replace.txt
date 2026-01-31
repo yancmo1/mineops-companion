@@ -1,0 +1,5 @@
+regex:sk-proj-[A-Za-z0-9_\-]+\n?\r?
+[REDACTED_OPENAI_KEY]
+
+regex:sk-[A-Za-z0-9_\-]+\n?\r?
+[REDACTED_OPENAI_KEY]
