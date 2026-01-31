@@ -74,4 +74,7 @@ fastlane/test_output
 *.bak
 
 # Local secrets
+.env# Ignore Xcode shared scheme files (avoid committing environment secrets)
+MineOpsCompanion.xcodeproj/xcshareddata/xcschemes/*.xcscheme
+# Ignore local .env with real keys
 .env
