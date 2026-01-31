@@ -10,14 +10,14 @@ enum MineType: String, CaseIterable, Identifiable, Codable {
     // Frontier progression
     case frontier = "Frontier Mine"
     
-    // Continents (each has 5 themed mines: Coal, Gold, Ruby, Sapphire, then a special one)
-    case start = "Start Continent"        // Obsidian
-    case ice = "Ice Continent"            // Ice
-    case fire = "Fire Continent"          // Fire
-    case dawn = "Dawn Continent"          // Light
-    case dusk = "Dusk Continent"          // Dark/Shadow
-    case ancient = "Ancient Continent"    // Crystal
-    case desert = "Lost Desert"           // Sand
+    // Continents (each has 5 unique themed mines)
+    case start = "Start Continent"        // Coal, Gold, Ruby, Diamond, Emerald
+    case ice = "Ice Continent"            // Moonstone, Amethyst, Crystal, Jade, Sapphire
+    case fire = "Fire Continent"          // Amber, Topaz, Sunstone, Platinum, Obsidian
+    case dawn = "Dawn Continent"          // Heliodor, Realgar, Alexandrite, Celestine, Titanite
+    case dusk = "Dusk Continent"          // Fluorite, Quartz, Aragonite, Beryl, Calcite
+    case ancient = "Ancient Continent"    // Aquamarine, Ammolite, Azurite, Pearl, Turquoise
+    case desert = "Lost Desert"           // Chrysoberyl, Labradorite, Aventurine, Jasper, Carnelian
     
     // Special mines
     case event = "Event Mine"
@@ -35,19 +35,19 @@ enum MineType: String, CaseIterable, Identifiable, Codable {
     var continentMines: [ContinentMine]? {
         switch self {
         case .start:
-            return [.coal, .gold, .ruby, .sapphire, .obsidian]
+            return [.coal, .gold, .ruby, .diamond, .emerald]
         case .ice:
-            return [.coal, .gold, .ruby, .sapphire, .ice]
+            return [.moonstone, .amethyst, .crystal, .jade, .sapphire]
         case .fire:
-            return [.coal, .gold, .ruby, .sapphire, .fire]
+            return [.amber, .topaz, .sunstone, .platinum, .obsidian]
         case .dawn:
-            return [.coal, .gold, .ruby, .sapphire, .dawn]
+            return [.heliodor, .realgar, .alexandrite, .celestine, .titanite]
         case .dusk:
-            return [.coal, .gold, .ruby, .sapphire, .dusk]
+            return [.fluorite, .quartz, .aragonite, .beryl, .calcite]
         case .ancient:
-            return [.coal, .gold, .ruby, .sapphire, .crystal]
+            return [.aquamarine, .ammolite, .azurite, .pearl, .turquoise]
         case .desert:
-            return [.coal, .gold, .ruby, .sapphire, .sand]
+            return [.chrysoberyl, .labradorite, .aventurine, .jasper, .carnelian]
         default:
             return nil
         }
@@ -56,20 +56,54 @@ enum MineType: String, CaseIterable, Identifiable, Codable {
 
 /// Named mines on each continent
 enum ContinentMine: String, CaseIterable, Identifiable, Codable {
-    // Common to all continents
+    // Start Continent mines
     case coal = "Coal"
     case gold = "Gold"
     case ruby = "Ruby"
+    case diamond = "Diamond"
+    case emerald = "Emerald"
+    
+    // Ice Continent mines
+    case moonstone = "Moonstone"
+    case amethyst = "Amethyst"
+    case crystal = "Crystal"
+    case jade = "Jade"
     case sapphire = "Sapphire"
     
-    // Continent-specific special mines
-    case obsidian = "Obsidian"   // Start
-    case ice = "Ice"             // Ice
-    case fire = "Fire"           // Fire
-    case dawn = "Dawn"           // Dawn
-    case dusk = "Dusk"           // Dusk
-    case crystal = "Crystal"     // Ancient
-    case sand = "Sand"           // Desert
+    // Fire Continent mines
+    case amber = "Amber"
+    case topaz = "Topaz"
+    case sunstone = "Sunstone"
+    case platinum = "Platinum"
+    case obsidian = "Obsidian"
+    
+    // Dawn Continent mines
+    case heliodor = "Heliodor"
+    case realgar = "Realgar"
+    case alexandrite = "Alexandrite"
+    case celestine = "Celestine"
+    case titanite = "Titanite"
+    
+    // Dusk Continent mines
+    case fluorite = "Fluorite"
+    case quartz = "Quartz"
+    case aragonite = "Aragonite"
+    case beryl = "Beryl"
+    case calcite = "Calcite"
+    
+    // Ancient Continent mines
+    case aquamarine = "Aquamarine"
+    case ammolite = "Ammolite"
+    case azurite = "Azurite"
+    case pearl = "Pearl"
+    case turquoise = "Turquoise"
+    
+    // Desert Continent mines
+    case chrysoberyl = "Chrysoberyl"
+    case labradorite = "Labradorite"
+    case aventurine = "Aventurine"
+    case jasper = "Jasper"
+    case carnelian = "Carnelian"
     
     var id: String { rawValue }
 }
