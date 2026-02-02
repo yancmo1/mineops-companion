@@ -58,19 +58,19 @@ public enum SMCardPillExtractor {
     case passive3
   }
 
-  /// V2 extraction result: tokens annotated with `source` and a typed mapping.
-  public struct ExtractionV2: Sendable, Hashable {
+  /// V2 extraction result: tokens annotated with `source` and a typed mapping (internal use only).
+  private struct InternalExtractionV2: Sendable, Hashable {
     public let tokens: [Token]
-    public let mapping: MappingV2
+    public let mapping: InternalMappingV2
 
-    public init(tokens: [Token], mapping: MappingV2) {
+    public init(tokens: [Token], mapping: InternalMappingV2) {
       self.tokens = tokens
       self.mapping = mapping
     }
   }
 
-  /// V2 mapping: preserves both `x` and `%` units for active/passive values.
-  public struct MappingV2: Sendable, Hashable {
+  /// V2 mapping: preserves both `x` and `%` units for active/passive values (internal use only).
+  private struct InternalMappingV2: Sendable, Hashable {
     public let activeMultiplier: Double?
     public let activeDurationSeconds: Int?
     public let activeCooldownSeconds: Int?
@@ -197,14 +197,73 @@ public enum SMCardPillExtractor {
     let imageSize = CGSize(width: cgImage.width, height: cgImage.height)
     let selection = SMCardPillTokenAssigner.selectionForTaggingV2(tokens: tokens, imageSize: imageSize)
 
-    // 3) Re-tag tokens with deterministic sources.
+    // 3) Re-tag tokens with deterministic sources (map from external SourceArea to internal).
     let taggedTokens: [Token] = tokens.enumerated().map { idx, token in
-      let src = selection.sourcesByIndex[idx] ?? .unknown
+      let externalSrc = selection.sourcesByIndex[idx]
+      let src: SourceArea
+      if let externalSrc = externalSrc {
+        switch externalSrc {
+        case .activeMultiplier:
+          src = .active
+        case .activeDuration:
+          src = .activeDuration
+        case .activeCooldown:
+          src = .activeCooldown
+        case .passiveSlot(let slot):
+          switch slot {
+          case 0: src = .passive1
+          case 1: src = .passive2
+          case 2: src = .passive3
+          default: src = .passive
+          }
+        case .unknown:
+          src = .unknown
+        }
+      } else {
+        src = .unknown
+      }
       return Token(raw: token.raw, kind: token.kind, confidence: token.confidence, rect: token.rect, source: src)
     }
 
-    let mappingV2 = Self.buildMappingV2(from: taggedTokens)
-    return ExtractionV2(tokens: taggedTokens, mapping: mappingV2)
+    let internalMapping = Self.buildInternalMappingV2(from: taggedTokens)
+    
+    // Convert internal MappingV2 (with TypedValue) to external MappingV2 (with PassiveValue)
+    let passiveValues: [PassiveValue] = internalMapping.passive.enumerated().map { index, typedVal in
+      let unit: PassiveValue.Unit
+      switch typedVal.unit {
+      case .x:
+        unit = .multiplier
+      case .percent:
+        unit = .percent
+      }
+      
+      let derivedMultiplier: Double?
+      if typedVal.unit == .x {
+        derivedMultiplier = typedVal.value
+      } else if typedVal.unit == .percent {
+        derivedMultiplier = 1.0 + (typedVal.value / 100.0)
+      } else {
+        derivedMultiplier = nil
+      }
+      
+      return PassiveValue(
+        slot: index,
+        raw: "\(typedVal.value)\(typedVal.unit == .x ? "x" : "%")",
+        value: typedVal.value,
+        unit: unit,
+        derivedMultiplier: derivedMultiplier,
+        confidence: 1.0  // We don't track individual confidence after selection
+      )
+    }
+    
+    let externalMapping = MappingV2(
+      activeMultiplier: internalMapping.activeMultiplier,
+      activeDurationSeconds: internalMapping.activeDurationSeconds,
+      activeCooldownSeconds: internalMapping.activeCooldownSeconds,
+      passive: passiveValues
+    )
+    
+    return ExtractionV2(tokens: taggedTokens, mapping: externalMapping)
   }
 
   // MARK: - Token parsing
@@ -445,6 +504,72 @@ public enum SMCardPillExtractor {
     let context = CIContext(options: [CIContextOption.useSoftwareRenderer: false])
     return context.createCGImage(scaled, from: scaled.extent)
   }
+
+  // MARK: - V2 typed mapping
+
+  private static func buildInternalMappingV2(from taggedTokens: [Token]) -> InternalMappingV2 {
+    func firstToken(in area: SourceArea) -> Token? {
+      taggedTokens
+        .filter { $0.source == area }
+        .sorted(by: { $0.confidence > $1.confidence })
+        .first
+    }
+
+    // Active duration / cooldown come from duration pills.
+    let activeDurationSeconds: Int? = {
+      guard let t = firstToken(in: .activeDuration) else { return nil }
+      if case .duration(let s) = t.kind { return s }
+      return nil
+    }()
+
+    let activeCooldownSeconds: Int? = {
+      guard let t = firstToken(in: .activeCooldown) else { return nil }
+      if case .duration(let s) = t.kind { return s }
+      return nil
+    }()
+
+    // Active effect can be either x or percent.
+    let activeTyped: TypedValue? = {
+      guard let t = firstToken(in: .active) else { return nil }
+      return typedValue(from: t.kind)
+    }()
+
+    // For back-compat, also expose activeMultiplier when typed is `.x`.
+    let activeMultiplier: Double? = {
+      guard let activeTyped else { return nil }
+      guard activeTyped.unit == .x else { return nil }
+      return activeTyped.value
+    }()
+
+    // Passive values should be in slot order 1..3 when available.
+    let passiveTyped: [TypedValue] = [
+      firstToken(in: .passive1),
+      firstToken(in: .passive2),
+      firstToken(in: .passive3)
+    ].compactMap { token in
+      guard let token else { return nil }
+      return typedValue(from: token.kind)
+    }
+
+    return InternalMappingV2(
+      activeMultiplier: activeMultiplier,
+      activeDurationSeconds: activeDurationSeconds,
+      activeCooldownSeconds: activeCooldownSeconds,
+      activeValue: activeTyped,
+      passive: passiveTyped
+    )
+  }
+
+  private static func typedValue(from kind: Token.Kind) -> TypedValue? {
+    switch kind {
+    case .multiplier(let m):
+      return TypedValue(value: m, unit: .x)
+    case .percent(let p):
+      return TypedValue(value: p, unit: .percent)
+    default:
+      return nil
+    }
+  }
 }
 
 // MARK: - Supporting utilities
@@ -597,69 +722,3 @@ private enum RectDeduper {
     return Double(interArea / unionArea)
   }
 }
-
-  // MARK: - V2 typed mapping
-
-  private static func buildMappingV2(from taggedTokens: [Token]) -> MappingV2 {
-    func firstToken(in area: SourceArea) -> Token? {
-      taggedTokens
-        .filter { $0.source == area }
-        .sorted(by: { $0.confidence > $1.confidence })
-        .first
-    }
-
-    // Active duration / cooldown come from duration pills.
-    let activeDurationSeconds: Int? = {
-      guard let t = firstToken(in: .activeDuration) else { return nil }
-      if case .duration(let s) = t.kind { return s }
-      return nil
-    }()
-
-    let activeCooldownSeconds: Int? = {
-      guard let t = firstToken(in: .activeCooldown) else { return nil }
-      if case .duration(let s) = t.kind { return s }
-      return nil
-    }()
-
-    // Active effect can be either x or percent.
-    let activeTyped: TypedValue? = {
-      guard let t = firstToken(in: .active) else { return nil }
-      return typedValue(from: t.kind)
-    }()
-
-    // For back-compat, also expose activeMultiplier when typed is `.x`.
-    let activeMultiplier: Double? = {
-      guard let activeTyped else { return nil }
-      guard activeTyped.unit == .x else { return nil }
-      return activeTyped.value
-    }()
-
-    // Passive values should be in slot order 1..3 when available.
-    let passiveTyped: [TypedValue] = [
-      firstToken(in: .passive1),
-      firstToken(in: .passive2),
-      firstToken(in: .passive3)
-    ].compactMap { token in
-      guard let token else { return nil }
-      return typedValue(from: token.kind)
-    }
-
-    return MappingV2(
-      activeMultiplier: activeMultiplier,
-      activeDurationSeconds: activeDurationSeconds,
-      activeCooldownSeconds: activeCooldownSeconds,
-      activeValue: activeTyped,
-      passive: passiveTyped
-    )
-  }
-
-  private static func typedValue(from kind: Token.Kind) -> TypedValue? {
-    switch kind {
-    case .multiplier(let m):
-      return TypedValue(value: m, unit: .x)
-    case .percent(let p):
-      return TypedValue(value: p, unit: .percent)
-    default:
-      return nil
-    }
-  }

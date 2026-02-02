@@ -18,12 +18,12 @@ public struct RecognizedSM: Identifiable, Hashable {
   public let passive: PassiveInfo
   public let actions: ActionFlags
 
-  public enum StatUnit: String, Codable, Hashable {
+  public enum StatUnit: String, Codable, Hashable, Sendable {
     case x
     case percent
   }
 
-  public enum StatState: String, Codable, Hashable {
+  public enum StatState: String, Codable, Hashable, Sendable {
     case unlocked
     case locked
     case absent
