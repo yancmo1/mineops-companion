@@ -33,7 +33,77 @@ public enum SMCardPillExtractor {
       self.source = source
     }
   }
+  
 
+  /// Strongly-typed numeric value extracted from a pill.
+  public struct TypedValue: Sendable, Hashable {
+    public let value: Double
+    public let unit: RecognizedSM.StatUnit
+
+    public init(value: Double, unit: RecognizedSM.StatUnit) {
+      self.value = value
+      self.unit = unit
+    }
+  }
+
+  /// Deterministic area assignment for a pill token (used for debugging and downstream mapping).
+  public enum SourceArea: String, Sendable, Hashable {
+    case unknown
+    case active
+    case activeDuration
+    case activeCooldown
+    case passive
+    case passive1
+    case passive2
+    case passive3
+  }
+
+  /// V2 extraction result: tokens annotated with `source` and a typed mapping.
+  public struct ExtractionV2: Sendable, Hashable {
+    public let tokens: [Token]
+    public let mapping: MappingV2
+
+    public init(tokens: [Token], mapping: MappingV2) {
+      self.tokens = tokens
+      self.mapping = mapping
+    }
+  }
+
+  /// V2 mapping: preserves both `x` and `%` units for active/passive values.
+  public struct MappingV2: Sendable, Hashable {
+    public let activeMultiplier: Double?
+    public let activeDurationSeconds: Int?
+    public let activeCooldownSeconds: Int?
+
+    /// Typed active effect (supports both `x` and `%`).
+    public let activeValue: TypedValue?
+
+    /// Typed passive values in the detected slot order (slot 1..3). May be fewer than 3.
+    public let passive: [TypedValue]
+
+    public init(
+      activeMultiplier: Double? = nil,
+      activeDurationSeconds: Int? = nil,
+      activeCooldownSeconds: Int? = nil,
+      activeValue: TypedValue? = nil,
+      passive: [TypedValue] = []
+    ) {
+      self.activeMultiplier = activeMultiplier
+      self.activeDurationSeconds = activeDurationSeconds
+      self.activeCooldownSeconds = activeCooldownSeconds
+
+      // If caller didn’t provide a typed value but did provide a multiplier, derive `.x`.
+      if let activeValue {
+        self.activeValue = activeValue
+      } else if let activeMultiplier {
+        self.activeValue = TypedValue(value: activeMultiplier, unit: .x)
+      } else {
+        self.activeValue = nil
+      }
+
+      self.passive = passive
+    }
+  }
   public struct Extraction: Sendable, Hashable {
     public let tokens: [Token]
 
@@ -133,7 +203,8 @@ public enum SMCardPillExtractor {
       return Token(raw: token.raw, kind: token.kind, confidence: token.confidence, rect: token.rect, source: src)
     }
 
-    return ExtractionV2(tokens: taggedTokens, mapping: selection.mapping)
+    let mappingV2 = Self.buildMappingV2(from: taggedTokens)
+    return ExtractionV2(tokens: taggedTokens, mapping: mappingV2)
   }
 
   // MARK: - Token parsing
@@ -526,3 +597,69 @@ private enum RectDeduper {
     return Double(interArea / unionArea)
   }
 }
+
+  // MARK: - V2 typed mapping
+
+  private static func buildMappingV2(from taggedTokens: [Token]) -> MappingV2 {
+    func firstToken(in area: SourceArea) -> Token? {
+      taggedTokens
+        .filter { $0.source == area }
+        .sorted(by: { $0.confidence > $1.confidence })
+        .first
+    }
+
+    // Active duration / cooldown come from duration pills.
+    let activeDurationSeconds: Int? = {
+      guard let t = firstToken(in: .activeDuration) else { return nil }
+      if case .duration(let s) = t.kind { return s }
+      return nil
+    }()
+
+    let activeCooldownSeconds: Int? = {
+      guard let t = firstToken(in: .activeCooldown) else { return nil }
+      if case .duration(let s) = t.kind { return s }
+      return nil
+    }()
+
+    // Active effect can be either x or percent.
+    let activeTyped: TypedValue? = {
+      guard let t = firstToken(in: .active) else { return nil }
+      return typedValue(from: t.kind)
+    }()
+
+    // For back-compat, also expose activeMultiplier when typed is `.x`.
+    let activeMultiplier: Double? = {
+      guard let activeTyped else { return nil }
+      guard activeTyped.unit == .x else { return nil }
+      return activeTyped.value
+    }()
+
+    // Passive values should be in slot order 1..3 when available.
+    let passiveTyped: [TypedValue] = [
+      firstToken(in: .passive1),
+      firstToken(in: .passive2),
+      firstToken(in: .passive3)
+    ].compactMap { token in
+      guard let token else { return nil }
+      return typedValue(from: token.kind)
+    }
+
+    return MappingV2(
+      activeMultiplier: activeMultiplier,
+      activeDurationSeconds: activeDurationSeconds,
+      activeCooldownSeconds: activeCooldownSeconds,
+      activeValue: activeTyped,
+      passive: passiveTyped
+    )
+  }
+
+  private static func typedValue(from kind: Token.Kind) -> TypedValue? {
+    switch kind {
+    case .multiplier(let m):
+      return TypedValue(value: m, unit: .x)
+    case .percent(let p):
+      return TypedValue(value: p, unit: .percent)
+    default:
+      return nil
+    }
+  }
