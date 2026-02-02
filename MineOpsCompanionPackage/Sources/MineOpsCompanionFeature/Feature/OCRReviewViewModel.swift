@@ -144,6 +144,11 @@ public final class OCRReviewViewModel: ObservableObject {
         recognized = persistence.saveRecognized(recognized)
     }
 
+    /// Reload recognized managers from persistence (e.g., after clearing all data).
+    public func reload() {
+        recognized = persistence.applyOverrides(to: persistence.loadRecognized())
+    }
+
     private func applyMerged(with incoming: [RecognizedSM]) {
         let merged = merge(current: recognized, incoming: incoming)
         let withOverrides = persistence.applyOverrides(to: merged)

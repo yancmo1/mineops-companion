@@ -67,3 +67,16 @@ Append short entries here when changes affect:
 - Initialized Atlas + subagents workflow
 - Created AGENTS.md, WORKSPACE_LIVING_DOC.md, docs/agents/ with standard roles
 - Backed up existing .github/copilot-instructions.md
+
+### 2026-02-01: Swift Compilation Fixes
+- Fixed orphaned static functions in SMCardPillExtractor.swift (buildMappingV2, typedValue)
+- Resolved type naming conflicts between internal and external V2 model types
+- Added Sendable conformance to RecognizedSM.StatUnit and StatState enums
+- All tests passing on iOS Simulator 26.0.1
+
+### 2026-02-01: Fixed "Clear All Data" in Settings
+- Added `reload()` method to OCRReviewViewModel to refresh from persistence
+- Fixed MineOpsSettingsView clear button to properly wrap async call in Task
+- Clear All Data now correctly removes all managers, snapshots, hashes, and strategy cache
+- UI properly reflects cleared state after operation completes
+

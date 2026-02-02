@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MineOpsSettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var review: OCRReviewViewModel
 
     @State private var existingKeySuffix: String?
     @State private var isKeySet = false
@@ -135,7 +136,11 @@ struct MineOpsSettingsView: View {
                 titleVisibility: .visible
             ) {
                 Button("Clear All Data", role: .destructive) {
-                    AppDataResetter.clearAllUserData()
+                    Task {
+                        AppDataResetter.clearAllUserData()
+                        review.reload()
+                        confirmClearAllData = false
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
