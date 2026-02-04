@@ -372,7 +372,7 @@
       },
       "passives": [
         {
-          "unlockLevel": "10",
+          "unlockLevel": 10,
           "type": "movement_speed",
           "baseMultiplier": 2.0,
           "description": "Movement Speed Boost"
