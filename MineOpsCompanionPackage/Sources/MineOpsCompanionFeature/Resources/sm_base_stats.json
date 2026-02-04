@@ -1,0 +1,468 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-02-04",
+  "description": "Comprehensive Super Manager base stats with upgrade formulas",
+  "upgradeFormulas": {
+    "Common": {
+      "maxLevel": 40,
+      "maxPromotion": 4,
+      "levelMultipliers": {
+        "1-10": 1.40,
+        "11-20": 1.40,
+        "21-30": 1.337,
+        "31-40": 1.30
+      }
+    },
+    "Rare": {
+      "maxLevel": 30,
+      "maxPromotion": 3,
+      "levelMultipliers": {
+        "1-10": 1.45,
+        "11-20": 1.35,
+        "21-30": 1.30
+      }
+    },
+    "Epic": {
+      "maxLevel": 20,
+      "maxPromotion": 2,
+      "levelMultipliers": {
+        "1-10": 1.50,
+        "11-20": 1.45
+      }
+    },
+    "Legendary": {
+      "maxLevel": 20,
+      "maxPromotion": 2,
+      "levelMultipliers": {
+        "1-10": 1.55,
+        "11-20": 1.50
+      }
+    }
+  },
+  "managers": [
+    {
+      "id": "sir_henry",
+      "name": "Sir Henry",
+      "rarity": "Rare",
+      "type": "Mine Shaft",
+      "elements": ["Flame", "Light"],
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 16.35,
+        "activeDuration": "30s",
+        "activeCooldown": "15m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "mining_walking_speed",
+          "baseMultiplier": 2.17,
+          "description": "Mining & Walking Speed Boost"
+        }
+      ]
+    },
+    {
+      "id": "sir_lorenzo",
+      "name": "Sir Lorenzo",
+      "rarity": "Legendary",
+      "type": "Mine Shaft",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 10.19,
+        "activeDuration": "1m",
+        "activeCooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "mining_speed",
+          "baseMultiplier": 4.17,
+          "description": "Mining Speed Boost"
+        },
+        {
+          "unlockLevel": 30,
+          "type": "upgrade_cost_reduction",
+          "baseMultiplier": 0.5,
+          "description": "Upgrade Cost Reduction"
+        },
+        {
+          "unlockLevel": 50,
+          "type": "continent_income",
+          "baseMultiplier": 1.41,
+          "description": "Continent Income Boost"
+        }
+      ]
+    },
+    {
+      "id": "luna_stella",
+      "name": "Luna & Stella",
+      "rarity": "Legendary",
+      "type": "Elevator",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 3.4,
+        "activeDuration": "2m30s",
+        "activeCooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "loading_movement_speed",
+          "baseMultiplier": 1.19,
+          "description": "Loading & Movement Speed Boost"
+        },
+        {
+          "unlockLevel": 30,
+          "type": "elevator_upgrade_cost_reduction",
+          "baseMultiplier": 0.5,
+          "description": "Elevator Upgrade Cost Reduction"
+        },
+        {
+          "unlockLevel": 50,
+          "type": "beam_to_warehouse",
+          "baseMultiplier": 0.17,
+          "description": "Beam Resources to Warehouse"
+        }
+      ]
+    },
+    {
+      "id": "professor_impossible",
+      "name": "Professor Impossible",
+      "rarity": "Legendary",
+      "type": "Warehouse",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 5.95,
+        "activeDuration": "2m30s",
+        "activeCooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "walking_loading_speed",
+          "baseMultiplier": 1.19,
+          "description": "Walking & Loading Speed Boost"
+        },
+        {
+          "unlockLevel": 30,
+          "type": "warehouse_upgrade_cost_reduction",
+          "baseMultiplier": 0.5,
+          "description": "Warehouse Upgrade Cost Reduction"
+        },
+        {
+          "unlockLevel": 50,
+          "type": "continent_income",
+          "baseMultiplier": 1.41,
+          "description": "Continent Income Boost"
+        }
+      ]
+    },
+    {
+      "id": "dr_lilly",
+      "name": "Dr. Lilly",
+      "rarity": "Epic",
+      "type": "Elevator",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 3.0,
+        "activeDuration": "5m",
+        "activeCooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "loading_speed",
+          "baseMultiplier": 1.5,
+          "description": "Loading Speed Boost"
+        },
+        {
+          "unlockLevel": 30,
+          "type": "continent_income",
+          "baseMultiplier": 1.3,
+          "description": "Continent Income Boost"
+        }
+      ]
+    },
+    {
+      "id": "blingsley",
+      "name": "Blingsley",
+      "rarity": "Rare",
+      "type": "Warehouse",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 10.0,
+        "activeDuration": "30s",
+        "activeCooldown": "15m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "warehouse_loading_speed",
+          "baseMultiplier": 2.0,
+          "description": "Warehouse Loading Speed Boost"
+        }
+      ]
+    },
+    {
+      "id": "mr_goodman",
+      "name": "Mr. Goodman",
+      "rarity": "Common",
+      "type": "Mine Shaft",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 0.1,
+        "activeDuration": "5m",
+        "activeCooldown": "30m",
+        "description": "-90% Upgrade Cost"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "upgrade_cost_reduction",
+          "baseMultiplier": 0.5,
+          "description": "Upgrade Cost Reduction"
+        }
+      ]
+    },
+    {
+      "id": "mr_turner",
+      "name": "Mr. Turner",
+      "rarity": "Rare",
+      "type": "Mine Shaft",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 10.0,
+        "activeDuration": "30s",
+        "activeCooldown": "15m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "mining_walking_speed",
+          "baseMultiplier": 2.0,
+          "description": "Mining & Walking Speed Boost"
+        }
+      ]
+    },
+    {
+      "id": "dr_steiner",
+      "name": "Dr. Steiner",
+      "rarity": "Epic",
+      "type": "Warehouse",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 3.0,
+        "activeDuration": "5m",
+        "activeCooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "warehouse_walking_speed",
+          "baseMultiplier": 1.5,
+          "description": "Warehouse Walking Speed Boost"
+        }
+      ]
+    },
+    {
+      "id": "mark",
+      "name": "Mark",
+      "rarity": "Common",
+      "type": "Elevator",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 5.0,
+        "activeDuration": "5m",
+        "activeCooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "loading_speed",
+          "baseMultiplier": 1.8,
+          "description": "Loading Speed Boost"
+        }
+      ]
+    },
+    {
+      "id": "gordon",
+      "name": "Gordon",
+      "rarity": "Common",
+      "type": "Warehouse",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 5.0,
+        "activeDuration": "2m",
+        "activeCooldown": "25m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "warehouse_loading_speed",
+          "baseMultiplier": 1.8,
+          "description": "Warehouse Loading Speed Boost"
+        }
+      ]
+    },
+    {
+      "id": "lee_vatori",
+      "name": "Lee Vatori",
+      "rarity": "Common",
+      "type": "Mine Shaft",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 5.0,
+        "activeDuration": "5m",
+        "activeCooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "mining_speed",
+          "baseMultiplier": 1.8,
+          "description": "Mining Speed Boost"
+        }
+      ]
+    },
+    {
+      "id": "mrs_goodman",
+      "name": "Mrs. Goodman",
+      "rarity": "Common",
+      "type": "Elevator",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 0.1,
+        "activeDuration": "5m",
+        "activeCooldown": "30m",
+        "description": "-90% Upgrade Cost"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "upgrade_cost_reduction",
+          "baseMultiplier": 0.5,
+          "description": "Upgrade Cost Reduction"
+        }
+      ]
+    },
+    {
+      "id": "ranger_sue",
+      "name": "Ranger Sue",
+      "rarity": "Rare",
+      "type": "Elevator",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 6.0,
+        "activeDuration": "1m30s",
+        "activeCooldown": "20m"
+      },
+      "passives": [
+        {
+          "unlockLevel": "10",
+          "type": "movement_speed",
+          "baseMultiplier": 2.0,
+          "description": "Movement Speed Boost"
+        }
+      ]
+    },
+    {
+      "id": "goodman_jr",
+      "name": "Goodman Jr.",
+      "rarity": "Common",
+      "type": "Mine Shaft",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 0.1,
+        "activeDuration": "5m",
+        "activeCooldown": "30m",
+        "description": "-90% Upgrade Cost"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "barrier_unlock_cost",
+          "baseMultiplier": 0.1,
+          "description": "Barrier Unlock Cost Reduction"
+        }
+      ]
+    },
+    {
+      "id": "chester",
+      "name": "Chester",
+      "rarity": "Common",
+      "type": "Mine Shaft",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 5.0,
+        "activeDuration": "5m",
+        "activeCooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "upgrade_cost_reduction",
+          "baseMultiplier": 0.5,
+          "description": "Upgrade Cost Reduction"
+        }
+      ]
+    },
+    {
+      "id": "santa_claus",
+      "name": "Santa Claus",
+      "rarity": "Epic",
+      "type": "Special",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 4.0,
+        "activeDuration": "5m",
+        "activeCooldown": "30m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "global_income",
+          "baseMultiplier": 1.5,
+          "description": "Global Income Boost"
+        }
+      ]
+    },
+    {
+      "id": "damian_jones",
+      "name": "Damian Jones",
+      "rarity": "Rare",
+      "type": "Elevator",
+      "baseStats": {
+        "level": 1,
+        "promotion": 0,
+        "activeMultiplier": 6.0,
+        "activeDuration": "1m30s",
+        "activeCooldown": "20m"
+      },
+      "passives": [
+        {
+          "unlockLevel": 10,
+          "type": "movement_speed",
+          "baseMultiplier": 2.0,
+          "description": "Movement Speed Boost"
+        }
+      ]
+    }
+  ]
+}
