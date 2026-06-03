@@ -48,7 +48,7 @@
     "department": "elevator",
     "rarity": "common",
     "elements": ["Sand"],
-    "aliases": ["Mrs Goodman", "MrsGoodman", "Goodman"],
+    "aliases": ["Mrs Goodman", "MrsGoodman", "Goodman Mrs"],
     "active": {
       "name": "Upgrade Cost Reduction",
       "type": "upgrade_cost_reduction",
@@ -114,7 +114,7 @@
     "department": "warehouse",
     "rarity": "common",
     "elements": ["Nature"],
-    "aliases": ["Mr Goodman", "MrGoodman"],
+    "aliases": ["Mr Goodman", "MrGoodman", "Goodman Mr"],
     "active": {
       "name": "Upgrade Cost Reduction",
       "type": "upgrade_cost_reduction",
@@ -513,7 +513,7 @@
     "department": "mineshaft",
     "rarity": "epic",
     "elements": ["Light", "Frost", "Nature"],
-    "aliases": ["Rabbid Blingsley", "RabbidBlingsley", "Rabbid"],
+    "aliases": ["Rabbid Blingsley", "RabbidBlingsley", "Rabbid", "Rabbit Blingsley", "RabbitBlingsley", "Rabbit"],
     "active": {
       "name": "Cash Gain",
       "type": "cash_multiplier",

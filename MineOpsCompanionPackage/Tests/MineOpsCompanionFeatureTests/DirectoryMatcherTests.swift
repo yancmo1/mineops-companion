@@ -97,4 +97,34 @@ struct DirectoryMatcherTests {
         let match = DirectoryMatcher.bestMatch(in: text, directory: directory)
         #expect(match?.id == "dr_steiner")
     }
+
+    @Test("Matches Rabbit Blingsley OCR variant to Rabbid Blingsley directory id")
+    func matchesRabbitVariantToRabbidBlingsley() throws {
+        let directory = try SMDirectory.load()
+        let text = """
+        Rabbit Blingsley
+        Level: 1/50
+        Active
+        Passive
+        """
+
+        let match = DirectoryMatcher.bestMatch(in: text, directory: directory)
+        #expect(match?.id == "rabbid_blingsley")
+    }
+
+    @Test("Prevents ambiguous 'Goodman' alias collision between Mr and Mrs Goodman")
+    func preventsGoodmanAliasCollision() throws {
+        let directory = try SMDirectory.load()
+
+        let mrGoodman = try #require(directory.first { $0.id == "mr_goodman" })
+        let mrsGoodman = try #require(directory.first { $0.id == "mrs_goodman" })
+
+        // Ensure standalone "Goodman" is not in either (too ambiguous)
+        #expect(!mrGoodman.aliases.contains("Goodman"))
+        #expect(!mrsGoodman.aliases.contains("Goodman"))
+
+        // Both should have explicit Mr/Mrs prefix variants
+        #expect(mrGoodman.aliases.contains { $0.lowercased().contains("mr") })
+        #expect(mrsGoodman.aliases.contains { $0.lowercased().contains("mrs") })
+    }
 }

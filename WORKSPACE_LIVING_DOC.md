@@ -119,3 +119,27 @@ Append short entries here when changes affect:
 - Added regression tests in `DirectoryMatcherTests` to ensure `Dr Nova` / `Dr N0va` do not map to `dr_steiner`, while `Dr Steiner` still matches correctly
 - Audited canonical export key set vs OCR directory ids and found a large gap (108 canonical keys vs 40 directory entries). Risk: missing directory entries can force fallback-name flows and increase ambiguous matching cases; follow-up is to expand/align directory coverage.
 
+### 2026-06-03: Fixed "Clear All Data" not clearing screenshot import tracking
+- Modified `AppDataResetter.clearAllUserData()` to call `ScreenshotsFetcher.shared.resetImportTracking()`
+- Previously cleared managers, snapshots, image hashes, and strategy cache but **not** the processed screenshot IDs set
+- This caused app to still recognize re-imported screenshots as duplicates even after clear-all, blocking re-import testing
+- Now "Clear All Data" → "Import New" allows true fresh import of same screenshots for validation/testing after code changes
+
+### 2026-06-03: Normalized Rabbid/Rabbit Blingsley cross-source key mismatch
+- Added OCR alias handling so `Rabbit Blingsley` text variants map to directory entry `rabbid_blingsley`
+- Directory ID `rabbid_blingsley` exports as `rabbid-blingsley` (correct canonical name)
+- Added regression tests for both matcher and exporter behavior to prevent future drift between in-game naming and external tracker key schema
+- Risk/mitigation: external tracker key naming may evolve; keep alias map explicit and small so future schema changes are easy to audit
+
+### 2026-06-03: Fixed Mr/Mrs Goodman alias collision
+- Removed standalone "Goodman" alias from Mrs. Goodman (was creating unintended bias)
+- Added "Goodman Mrs" to Mrs. Goodman and "Goodman Mr" to Mr. Goodman for explicit variants
+- Added DirectoryMatcher test to catch future alias collisions between similar-named entries
+- Prevents OCR-only "Goodman" reads from always misclassifying as Mrs. Goodman
+
+### 2026-06-03: Added fixture-backed export key universe contract test
+- Added test fixture `Fixtures/sm_tracker_hub_keys.json` with expected external tracker key universe (108 keys)
+- Added `SMTrackerExporterTests.exportKeyUniverseMatchesHubFixture()` to compare generated export payload keys against fixture keys
+- This catches accidental key drift (missing/extra/renamed ids) independently of the exporter's in-code key list
+- Added explicit assertions to require `rabbit-blingsley` and forbid `rabbid-blingsley` in exported key universe
+

@@ -5,6 +5,21 @@ import UIKit
 
 @Suite("SMTrackerExporter")
 struct SMTrackerExporterTests {
+    private static func loadHubKeysFixture() throws -> [String] {
+        #if SWIFT_PACKAGE
+        guard let url = Bundle.module.url(forResource: "sm_tracker_hub_keys", withExtension: "json") else {
+            throw NSError(domain: "Fixtures", code: 3, userInfo: [NSLocalizedDescriptionKey: "Missing sm_tracker_hub_keys.json"])
+        }
+        #else
+        guard let url = Bundle.main.url(forResource: "sm_tracker_hub_keys", withExtension: "json") else {
+            throw NSError(domain: "Fixtures", code: 4, userInfo: [NSLocalizedDescriptionKey: "Missing sm_tracker_hub_keys.json in main bundle"])
+        }
+        #endif
+
+        let data = try Data(contentsOf: url, options: .mappedIfSafe)
+        return try JSONDecoder().decode([String].self, from: data)
+    }
+
     @Test("Exports strict schema with exact fields")
     func exportsStrictSchema() throws {
         let drLilly = try makeDirectoryEntry(id: "dr_lilly", name: "Dr. Lilly")
@@ -108,6 +123,43 @@ struct SMTrackerExporterTests {
 
         #expect(raw.count == SMTrackerExporter.canonicalManagerKeys.count)
         #expect(raw.keys.contains("completely-new-manager") == false)
+    }
+
+    @Test("Export key universe matches hub fixture contract")
+    func exportKeyUniverseMatchesHubFixture() throws {
+        let fixtureKeys = Set(try Self.loadHubKeysFixture())
+
+        // Generate payload from exporter itself (instead of reading static constant directly)
+        // so this test catches accidental schema drifts in output shape/key set.
+        let data = try SMTrackerExporter.makeExportData(from: [], directory: [])
+        let raw = try #require(try JSONSerialization.jsonObject(with: data) as? [String: [String: Any]])
+        let exportKeys = Set(raw.keys)
+
+        #expect(fixtureKeys.count == 108)
+        #expect(exportKeys == fixtureKeys)
+        #expect(exportKeys.contains("rabbid-blingsley"))
+        #expect(exportKeys.contains("rabbit-blingsley") == false)
+    }
+
+    @Test("Maps Rabbid Blingsley directory id to rabbid-blingsley export key")
+    func mapsRabbidDirectoryKeyToRabbidExportKey() throws {
+        let rabbid = try makeDirectoryEntry(id: "rabbid_blingsley", name: "Rabbid Blingsley")
+        let recognized = RecognizedSM(
+            sourceImage: UIImage(),
+            rawText: "",
+            level: 12,
+            directoryMatch: rabbid,
+            resolvedName: rabbid.name,
+            stats: SMStats(level: .init(current: 12, total: 50)),
+            stars: 3,
+            fragments: 9
+        )
+
+        let data = try SMTrackerExporter.makeExportData(from: [recognized], directory: [rabbid])
+        let raw = try #require(try JSONSerialization.jsonObject(with: data) as? [String: [String: Any]])
+
+        #expect(raw["rabbid-blingsley"]?["unlocked"] as? Bool == true)
+        #expect(raw["rabbid-blingsley"]?["rank"] as? Int == 3)
     }
 
     private func makeDirectoryEntry(id: String, name: String) throws -> SMDirectoryEntry {
