@@ -54,6 +54,7 @@ final class Persistence {
                 rarity: record.rarity,
                 role: record.role,
                 stars: record.stars,
+                fragments: record.fragments,
                 active: record.active?.asDomain ?? .init(),
                 passive: record.passive?.asDomain ?? .init(),
                 actions: record.actions?.asDomain ?? .init()
@@ -130,6 +131,7 @@ final class Persistence {
                     rarity: item.rarity,
                     role: item.role,
                     stars: item.stars,
+                    fragments: item.fragments,
                     active: storedActive,
                     passive: storedPassive,
                     actions: storedActions
@@ -191,6 +193,7 @@ private struct StoredRecognizedSM: Codable {
     let rarity: String?
     let role: String?
     let stars: Int?
+    let fragments: Int?
     let active: StoredActiveInfo?
     let passive: StoredPassiveInfo?
     let actions: StoredActions?
@@ -208,6 +211,7 @@ private struct StoredRecognizedSM: Codable {
         case rarity
         case role
         case stars
+        case fragments
         case active
         case passive
         case actions
@@ -225,6 +229,7 @@ private struct StoredRecognizedSM: Codable {
         rarity: String?,
         role: String?,
         stars: Int?,
+        fragments: Int?,
         active: StoredActiveInfo?,
         passive: StoredPassiveInfo?,
         actions: StoredActions?
@@ -241,6 +246,7 @@ private struct StoredRecognizedSM: Codable {
         self.rarity = rarity
         self.role = role
         self.stars = stars
+        self.fragments = fragments
         self.active = active
         self.passive = passive
         self.actions = actions
@@ -260,6 +266,7 @@ private struct StoredRecognizedSM: Codable {
         rarity = try container.decodeIfPresent(String.self, forKey: .rarity)
         role = try container.decodeIfPresent(String.self, forKey: .role)
         stars = try container.decodeIfPresent(Int.self, forKey: .stars)
+        fragments = try container.decodeIfPresent(Int.self, forKey: .fragments)
         active = try container.decodeIfPresent(StoredActiveInfo.self, forKey: .active)
         passive = try container.decodeIfPresent(StoredPassiveInfo.self, forKey: .passive)
         actions = try container.decodeIfPresent(StoredActions.self, forKey: .actions)
@@ -278,6 +285,7 @@ private struct StoredRecognizedSM: Codable {
         try container.encodeIfPresent(rarity, forKey: .rarity)
         try container.encodeIfPresent(role, forKey: .role)
         try container.encodeIfPresent(stars, forKey: .stars)
+        try container.encodeIfPresent(fragments, forKey: .fragments)
         try container.encodeIfPresent(active, forKey: .active)
         try container.encodeIfPresent(passive, forKey: .passive)
         try container.encodeIfPresent(actions, forKey: .actions)
@@ -362,6 +370,7 @@ private struct StoredRecognizedSMOverride: Codable {
     let rarity: String?
     let role: String?
     let stars: Int?
+    let fragments: Int?
     let active: StoredRecognizedSM.StoredActiveInfo?
     let passive: StoredRecognizedSM.StoredPassiveInfo?
     let actions: StoredRecognizedSM.StoredActions?
@@ -372,6 +381,7 @@ private struct StoredRecognizedSMOverride: Codable {
         self.rarity = record.rarity
         self.role = record.role
         self.stars = record.stars
+        self.fragments = record.fragments
         self.active = record.active.isEmpty ? nil : StoredRecognizedSM.StoredActiveInfo(from: record.active)
         let passiveWithoutUnlockSlots = RecognizedSM.PassiveInfo(
             effect: record.passive.effect,
@@ -390,6 +400,7 @@ private struct StoredRecognizedSMOverride: Codable {
         self.rarity = original.rarity != updated.rarity ? updated.rarity : nil
         self.role = original.role != updated.role ? updated.role : nil
         self.stars = original.stars != updated.stars ? updated.stars : nil
+        self.fragments = original.fragments != updated.fragments ? updated.fragments : nil
 
         self.active = original.active != updated.active ? (updated.active.isEmpty ? nil : StoredRecognizedSM.StoredActiveInfo(from: updated.active)) : nil
 
@@ -413,7 +424,7 @@ private struct StoredRecognizedSMOverride: Codable {
     }
 
     var isEffectivelyEmpty: Bool {
-        resolvedName == nil && rarity == nil && role == nil && stars == nil && active == nil && passive == nil && actions == nil
+        resolvedName == nil && rarity == nil && role == nil && stars == nil && fragments == nil && active == nil && passive == nil && actions == nil
     }
 }
 
@@ -457,6 +468,7 @@ private extension RecognizedSM {
             rarity: stored.rarity ?? rarity,
             role: stored.role ?? role,
             stars: stored.stars ?? stars,
+            fragments: stored.fragments ?? fragments,
             active: activeOverride,
             passive: passiveOverride,
             actions: stored.actions?.asDomain ?? actions

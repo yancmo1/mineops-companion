@@ -14,8 +14,25 @@ public final class OCRProcessor: ObservableObject {
     public func processImages(_ images: [UIImage]) async {
         for (index, image) in images.enumerated() {
             guard let cgImage = image.cgImage else { continue }
-            let text = await OCRTextRecognizer.recognizeText(from: cgImage)
-            
+
+            // Run two spatial OCR passes:
+            // - corrected text (better words)
+            // - raw text without language correction (better symbols/numbers)
+            async let spatialCorrectedAsync = OCRTextRecognizer.recognizeTextWithSpatialData(
+                from: cgImage,
+                usesLanguageCorrection: true
+            )
+            async let spatialRawAsync = OCRTextRecognizer.recognizeTextWithSpatialData(
+                from: cgImage,
+                usesLanguageCorrection: false
+            )
+            async let pillExtractionAsync = SMCardPillExtractor.extract(from: cgImage)
+
+            let spatialCorrected = await spatialCorrectedAsync
+            let spatialRaw = await spatialRawAsync
+            let spatialLines = mergeSpatialLines(primary: spatialCorrected, secondary: spatialRaw)
+            let text = spatialLines.map(\.text).joined(separator: "\n")
+
             // Validate that this looks like a Super Manager card
             let validation = SMCardValidator.validate(ocrText: text)
             if !validation.isValid {
@@ -26,15 +43,18 @@ public final class OCRProcessor: ObservableObject {
             
             print("✅ Valid SM card detected: \(validation.summary)")
 
-            // New approach: extract and OCR the "blue pill" tokens in the bottom panel.
-            // This improves reliability for durations and numeric values (e.g. `5m`, `30m`, `8.08x`, `-14.5%`).
-            let pillExtraction = await SMCardPillExtractor.extract(from: cgImage)
-            
+            let pillExtraction = await pillExtractionAsync
+
             let stats = SMStatsParser.parse(text: text)
             let level = stats.level?.current ?? OCRLevelParser.parse(from: text)
             let match = DirectoryMatcher.bestMatch(in: text, directory: directory)
             let displayName = match?.name ?? OCRTextHeuristics.guessDisplayName(from: text)
-            let fields = OCRFieldExtraction.extract(from: text)
+
+            // Use spatial-aware field extraction (properly splits Active vs Passive columns).
+            let fields = OCRFieldExtraction.extractWithSpatialData(from: spatialLines)
+            let visualStars = SMCardStarDetector.detectStars(in: image)
+            let mergedStars = fields.stars ?? visualStars
+
             let fingerprint = ImageHasher.fingerprint(for: image)
 
             // Debug-only: run V2 pill extraction in parallel with legacy and log a diff.
@@ -48,10 +68,35 @@ public final class OCRProcessor: ObservableObject {
             let passiveStatuses = AbilityDetector.detectPassives(in: image)
             let unlockedSlots = passiveStatuses.map { $0.isUnlocked }
 
+            // Merge: prefer pill extraction (more precise), fall back to field extraction.
             let mergedActiveMultiplier = pillExtraction.activeMultiplier ?? fields.activeMultiplier
             let mergedActiveDuration = pillExtraction.activeDurationSeconds ?? fields.activeDurationSeconds
             let mergedActiveCooldown = pillExtraction.activeCooldownSeconds ?? fields.activeCooldownSeconds
             let mergedPassiveMultiplier = pillExtraction.passiveMultiplier ?? fields.passiveMultiplier
+
+            // Build typed active effect.
+            let activeEffect: RecognizedSM.ActiveEffect? = {
+                if let value = fields.activeValue, let unit = fields.activeUnit {
+                    return RecognizedSM.ActiveEffect(value: value, unit: unit)
+                }
+                return nil
+            }()
+
+            // Build passive slots from field extraction values + unlock status.
+            let passiveSlots: [RecognizedSM.StatSlot] = {
+                let values = fields.passiveValues
+                var slots: [RecognizedSM.StatSlot] = []
+                for i in 0..<3 {
+                    let isUnlocked = (i < unlockedSlots.count) ? unlockedSlots[i] : false
+                    let state: RecognizedSM.StatState = isUnlocked ? .unlocked : .locked
+                    if i < values.count {
+                        slots.append(RecognizedSM.StatSlot(slot: i, state: state, value: values[i].value, unit: values[i].unit))
+                    } else {
+                        slots.append(RecognizedSM.StatSlot(slot: i, state: .absent))
+                    }
+                }
+                return slots
+            }()
 
             let recognized = RecognizedSM(
                 sourceImage: image,
@@ -63,10 +108,12 @@ public final class OCRProcessor: ObservableObject {
                 imageFingerprint: fingerprint,
                 rarity: fields.rarity,
                 role: fields.role,
-                stars: fields.stars,
+                stars: mergedStars,
+                fragments: fields.fragments,
                 active: RecognizedSM.ActiveInfo(
                     effect: fields.activeEffect,
                     multiplier: mergedActiveMultiplier,
+                    effectValue: activeEffect,
                     durationSeconds: mergedActiveDuration,
                     cooldownSeconds: mergedActiveCooldown
                 ),
@@ -74,7 +121,8 @@ public final class OCRProcessor: ObservableObject {
                     effect: fields.passiveEffect,
                     multiplier: mergedPassiveMultiplier,
                     durationSeconds: fields.passiveDurationSeconds,
-                    unlockedSlots: unlockedSlots
+                    unlockedSlots: unlockedSlots,
+                    slots: passiveSlots
                 ),
                 actions: RecognizedSM.ActionFlags(
                     hasLevelUp: fields.hasLevelUp,
@@ -102,6 +150,76 @@ public final class OCRProcessor: ObservableObject {
     func reset() {
         results = []
         skippedCount = 0
+    }
+
+    private func mergeSpatialLines(
+        primary: [OCRTextRecognizer.SpatialLine],
+        secondary: [OCRTextRecognizer.SpatialLine]
+    ) -> [OCRTextRecognizer.SpatialLine] {
+        struct Bucket: Hashable {
+            let x: Int
+            let y: Int
+            let w: Int
+            let h: Int
+        }
+
+        func bucket(for line: OCRTextRecognizer.SpatialLine) -> Bucket {
+            Bucket(
+                x: Int((line.boundingBox.origin.x * 100).rounded()),
+                y: Int((line.boundingBox.origin.y * 100).rounded()),
+                w: Int((line.boundingBox.size.width * 100).rounded()),
+                h: Int((line.boundingBox.size.height * 100).rounded())
+            )
+        }
+
+        func qualityScore(for line: OCRTextRecognizer.SpatialLine) -> Double {
+            let text = line.text.lowercased()
+            var score = line.confidence
+
+            // Prefer lines likely carrying star/rank/fragment signal.
+            if text.contains("⭐") || text.contains("★") || text.contains("✦") || text.contains("✪") {
+                score += 0.40
+            }
+            if text.range(of: #"\b[0-9]{1,3}\s*/\s*(15|30|50|100)\b"#, options: .regularExpression) != nil {
+                score += 0.35
+            }
+            if text.range(of: #"\brank\s*[:#-]?\s*[0-9]{1,2}\b"#, options: .regularExpression) != nil {
+                score += 0.25
+            }
+
+            // Keep section headers stable.
+            if text.contains("active") || text.contains("passive") {
+                score += 0.15
+            }
+
+            return score
+        }
+
+        var mergedByBucket: [Bucket: OCRTextRecognizer.SpatialLine] = [:]
+        mergedByBucket.reserveCapacity(max(primary.count, secondary.count))
+
+        for line in primary {
+            mergedByBucket[bucket(for: line)] = line
+        }
+
+        for line in secondary {
+            let key = bucket(for: line)
+            guard let current = mergedByBucket[key] else {
+                mergedByBucket[key] = line
+                continue
+            }
+
+            if qualityScore(for: line) > qualityScore(for: current) {
+                mergedByBucket[key] = line
+            }
+        }
+
+        return mergedByBucket.values.sorted { lhs, rhs in
+            if abs(lhs.centerYTopOrigin - rhs.centerYTopOrigin) > 0.005 {
+                return lhs.centerYTopOrigin < rhs.centerYTopOrigin
+            }
+            return lhs.centerX < rhs.centerX
+        }
     }
 
     // Intentionally no local upsert/dedup in OCRProcessor.

@@ -509,7 +509,11 @@ private extension StrategyPipelineView {
     var selectedRecognizedManagers: [RecognizedSM] {
         let ids = selectedManagerIDs
         return review.recognized
-            .filter { ids.contains($0.identityKey) }
+            .filter {
+                // Use the same identifier logic as managerOptions to avoid mismatch.
+                let identifier = $0.directoryMatch?.id ?? $0.resolvedName
+                return ids.contains(identifier)
+            }
             .sorted { $0.resolvedName.localizedCaseInsensitiveCompare($1.resolvedName) == .orderedAscending }
     }
 }

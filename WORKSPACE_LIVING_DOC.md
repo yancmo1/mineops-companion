@@ -80,3 +80,42 @@ Append short entries here when changes affect:
 - Clear All Data now correctly removes all managers, snapshots, hashes, and strategy cache
 - UI properly reflects cleared state after operation completes
 
+### 2026-06-03: Added strict SM tracker JSON export format
+- Added `SMTrackerExporter` to generate backup JSON in exact external schema (`unlocked`, `rank`, `level`, `promoted`, `fragments`, `chronoExcluded`, `tierlistExcluded`)
+- Added Manager screen action: **Export SM Tracker Backup** (shares `sm-tracker-backup.json`)
+- Export includes all known directory managers with deterministic defaults and overlays recognized manager progress where available
+- Added `SMTrackerExporterTests` to validate schema strictness and key formatting (`snake_case` ids -> hyphenated keys)
+- Risk/limitation: app does not yet track `fragments` or exclusion flags per manager, so these fields export as defaults until model support is added
+
+### 2026-06-03: OCR improvements for stars + fragments
+- Extended OCR extraction to parse stars from both star glyphs and rank-text fallback (`Rank N`)
+- Added fragment piece extraction from OCR text (explicit `Fragments X/Y` and fallback `X/15` / `X/30` patterns)
+- Added `fragments` to `RecognizedSM`, persistence storage, overrides, and Manager edit/debug UI
+- Updated strict tracker export to emit OCR-derived `fragments` when available
+- Added regression tests for stars fallback and fragment extraction in `OCRFieldExtractionTests`
+
+### 2026-06-03: Dual-pass Vision OCR merge for numeric/symbol reliability
+- Updated `OCRTextRecognizer` spatial lines to carry confidence values
+- Added configurable language-correction toggle for spatial OCR calls
+- Updated `OCRProcessor` to run two OCR passes (corrected + raw) and merge lines by position/quality
+- Merge heuristic now prefers lines likely containing star/rank/fragment/progress tokens when confidence is competitive
+- Goal: reduce numeric/symbol loss from language correction while retaining readable section labels
+
+### 2026-06-03: Fragment parsing updated for rank/promotion-scaled thresholds
+- Calibrated against sample OCR output where rank-up progress includes denominators beyond `15/30` (e.g. `50`, `80`, and potentially larger)
+- Updated fragment parser to treat rank-up progress as dynamic `x/y` rather than fixed denominator sets
+- Added filtering to avoid misreading `Level x/50` and `Promotion x/5` as fragment progress
+- Added regression coverage in `OCRFieldExtractionTests` for `/50`, `/80`, and scaled-denominator rank-up patterns
+
+### 2026-06-03: Added visual star-row fallback to prevent rank=0 exports when OCR misses star glyphs
+- Added `SMCardStarDetector` (image-based detector) to count filled stars from the card star row using normalized slots + color thresholds
+- Integrated fallback in `OCRProcessor`: `stars = OCRFieldExtraction.stars ?? SMCardStarDetector.detectStars(...)`
+- This keeps export rank aligned with app rank when Vision OCR does not emit star symbols/text
+- Added `SMCardStarDetectorTests` with screenshot fixtures validating 0-, 1-, and 2-star detection
+
+### 2026-06-03: Hardened directory matching to avoid Dr. Nova -> Dr. Steiner misclassification
+- Updated `DirectoryMatcher` token scoring to reject matches based only on weak honorific tokens (`dr`, `mr`, `sir`, etc.)
+- Added OCR-confusion normalization for names in matcher (`0` -> `o` when letter-adjacent), improving resilience for lines like `N0va`
+- Added regression tests in `DirectoryMatcherTests` to ensure `Dr Nova` / `Dr N0va` do not map to `dr_steiner`, while `Dr Steiner` still matches correctly
+- Audited canonical export key set vs OCR directory ids and found a large gap (108 canonical keys vs 40 directory entries). Risk: missing directory entries can force fallback-name flows and increase ambiguous matching cases; follow-up is to expand/align directory coverage.
+

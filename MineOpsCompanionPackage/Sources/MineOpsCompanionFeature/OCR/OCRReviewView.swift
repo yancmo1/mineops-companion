@@ -15,6 +15,9 @@ struct OCRReviewView: View {
     @State private var editDraft = RecognizedSMEditDraft()
     @State private var expandedCardIds = Set<UUID>()
     @State private var showingScreenshotImporter = false
+    @State private var exportFileURL: URL?
+    @State private var showingExportSheet = false
+    @State private var exportError: String?
 
     var body: some View {
         VStack(spacing: 16) {
@@ -78,6 +81,12 @@ struct OCRReviewView: View {
                 Text(importError)
                     .foregroundStyle(.red)
                     .accessibilityIdentifier("importErrorLabel")
+            }
+
+            if let exportError {
+                Text(exportError)
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("exportErrorLabel")
             }
 
             if review.recognized.isEmpty {
@@ -245,11 +254,22 @@ struct OCRReviewView: View {
                         } label: {
                             Label("History", systemImage: "clock.arrow.circlepath")
                         }
+
+                        Button {
+                            exportSMTrackerBackup()
+                        } label: {
+                            Label("Export SM Tracker Backup", systemImage: "square.and.arrow.up")
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                             .foregroundStyle(Color.accentCyan)
                     }
                     
+                    .sheet(isPresented: $showingExportSheet, onDismiss: cleanupExportFile) {
+                        if let exportFileURL {
+                            ActivityShareSheet(activityItems: [exportFileURL])
+                        }
+                    }
                     EditButton()
                         .tint(.accentCyan)
                     Image(systemName: "checkmark.seal")
@@ -402,11 +422,12 @@ private extension OCRReviewView {
 
     func rarityLine(for result: RecognizedSM) -> String? {
         let rarity = result.rarity ?? result.directoryMatch?.rarity.capitalized
-        guard rarity != nil || result.stars != nil else { return nil }
+        guard rarity != nil || result.stars != nil || result.fragments != nil else { return nil }
 
         var parts: [String] = []
         if let rarity { parts.append(rarity) }
         if let stars = result.stars { parts.append("⭐️ x\(stars)") }
+        if let fragments = result.fragments { parts.append("Fragments: \(fragments)") }
         return parts.isEmpty ? nil : parts.joined(separator: " • ")
     }
 
@@ -422,6 +443,7 @@ private extension OCRReviewView {
             ("Rarity", valueOrDash(result.rarity)),
             ("Role", valueOrDash(result.role)),
             ("Stars", result.stars.map { String($0) } ?? "—"),
+            ("Fragments", result.fragments.map { String($0) } ?? "—"),
             ("Active Effect", valueOrDash(result.active.effect)),
             ("Active Multiplier", formatMultiplier(result.active.multiplier)),
             ("Active Duration", result.active.durationSeconds.map { formatDuration(seconds: $0) } ?? "—"),
@@ -550,6 +572,29 @@ private extension OCRReviewView {
         }
         return "\(seconds)s"
     }
+
+    func exportSMTrackerBackup() {
+        do {
+            let data = try review.smTrackerExportData()
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("sm-tracker-backup.json")
+
+            try data.write(to: url, options: .atomic)
+
+            exportFileURL = url
+            exportError = nil
+            showingExportSheet = true
+        } catch {
+            exportError = "Export failed: \(error.localizedDescription)"
+        }
+    }
+
+    func cleanupExportFile() {
+        if let exportFileURL {
+            try? FileManager.default.removeItem(at: exportFileURL)
+        }
+        self.exportFileURL = nil
+    }
 }
 
 private struct RecognizedSMEditDraft {
@@ -557,6 +602,7 @@ private struct RecognizedSMEditDraft {
     var rarity: String = ""
     var role: String = ""
     var stars: String = ""
+    var fragments: String = ""
     var activeEffect: String = ""
     var activeMultiplier: String = ""
     var activeDuration: String = ""
@@ -575,6 +621,7 @@ private struct RecognizedSMEditDraft {
         rarity = record.rarity ?? ""
         role = record.role ?? ""
         stars = record.stars.map { String($0) } ?? ""
+        fragments = record.fragments.map { String($0) } ?? ""
         activeEffect = record.active.effect ?? ""
         activeMultiplier = record.active.multiplier.map { Self.formatDouble($0) } ?? ""
         activeDuration = record.active.durationSeconds.map { Self.formatDurationForDraft($0) } ?? ""
@@ -592,6 +639,7 @@ private struct RecognizedSMEditDraft {
         let rarityValue = cleaned(rarity)
         let roleValue = cleaned(role)
         let starsValue = parseStars(stars)
+        let fragmentsValue = parseStars(fragments)
 
         let activeInfo = RecognizedSM.ActiveInfo(
             effect: cleaned(activeEffect),
@@ -618,6 +666,7 @@ private struct RecognizedSMEditDraft {
             rarity: rarityValue,
             role: roleValue,
             stars: starsValue,
+            fragments: fragmentsValue,
             active: activeInfo,
             passive: passiveInfo,
             actions: actionFlags
@@ -702,6 +751,8 @@ private struct ManagerEditSheet: View {
                 TextField("Rarity", text: $draft.rarity)
                 TextField("Role", text: $draft.role)
                 TextField("Stars", text: $draft.stars)
+                    .keyboardType(.numberPad)
+                TextField("Fragments", text: $draft.fragments)
                     .keyboardType(.numberPad)
             }
 

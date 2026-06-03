@@ -20,15 +20,54 @@ public enum OCRLevelParser {
 }
 
 public enum DirectoryMatcher {
+  /// Name tokens that are too generic to identify a specific manager by themselves.
+  private static let weakNameTokens: Set<String> = [
+    "dr", "mr", "mrs", "ms", "sir", "lord", "lady", "count", "queen", "king", "prof", "professor"
+  ]
+
+  /// Normalizes common OCR letter/digit confusions for name matching only.
+  /// Example: "N0va" -> "nova"
+  private static func normalizeNameOCRConfusions(_ s: String) -> String {
+    let chars = Array(s)
+    guard !chars.isEmpty else { return s }
+
+    var out = ""
+    out.reserveCapacity(chars.count)
+
+    for i in chars.indices {
+      let c = chars[i]
+      let prevIsLetter = i > 0 ? chars[i - 1].isLetter : false
+      let nextIsLetter = i + 1 < chars.count ? chars[i + 1].isLetter : false
+
+      if c == "0" && (prevIsLetter || nextIsLetter) {
+        out.append("o")
+      } else {
+        out.append(c)
+      }
+    }
+
+    return out
+  }
+
+  private static func hasStrongSharedToken(_ tokens: Set<String>) -> Bool {
+    tokens.contains { token in
+      token.count >= 3 && !weakNameTokens.contains(token)
+    }
+  }
+
   private static func norm(_ s: String) -> String {
-    s.folding(options: .diacriticInsensitive, locale: .current)
+    normalizeNameOCRConfusions(
+      s.folding(options: .diacriticInsensitive, locale: .current)
       .lowercased()
       .replacingOccurrences(of: ".", with: "")
+      .replacingOccurrences(of: "'", with: "")
+      .replacingOccurrences(of: "’", with: "")
       .replacingOccurrences(of: "-", with: " ")
       .replacingOccurrences(of: "_", with: " ")
       .replacingOccurrences(of: "+", with: " ")
       .replacingOccurrences(of: "  ", with: " ")
       .trimmingCharacters(in: .whitespacesAndNewlines)
+    )
   }
 
   private static func tokensLettersOnly(_ s: String) -> Set<String> {
@@ -65,10 +104,23 @@ public enum DirectoryMatcher {
       let score = candidates.map { candidate -> Double in
         let tokensB = tokensLettersOnly(candidate)
         guard !tokensB.isEmpty else { return 0 }
-        let intersection = tokensA.intersection(tokensB).count
+        let intersectionTokens = tokensA.intersection(tokensB)
+        // Guard against false positives where only weak tokens overlap,
+        // e.g. "dr" matching all doctor names.
+        guard hasStrongSharedToken(intersectionTokens) else { return 0 }
+
+        let intersection = intersectionTokens.count
         let union = tokensA.union(tokensB).count
         guard union > 0 else { return 0 }
-        return Double(intersection) / Double(union)
+        var score = Double(intersection) / Double(union)
+
+        // Slight penalty for 1-token overlaps across multi-token names.
+        // This helps avoid near-collisions while still allowing clear single-token matches.
+        if intersection == 1, tokensA.count >= 2, tokensB.count >= 2 {
+          score *= 0.8
+        }
+
+        return score
       }.max() ?? 0
 
       if let currentBest = best {

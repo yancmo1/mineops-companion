@@ -4,6 +4,7 @@ struct OCRFieldExtraction {
     let rarity: String?
     let role: String?
     let stars: Int?
+    let fragments: Int?
     let activeEffect: String?
     let activeMultiplier: Double?
     let activeDurationSeconds: Int?
@@ -19,15 +20,116 @@ struct OCRFieldExtraction {
     let hasPromote: Bool
     let hasRankUp: Bool
 
+    /// Extract fields from raw full-screen OCR text (fallback when spatial data unavailable).
     static func extract(from text: String) -> OCRFieldExtraction {
-        let rarity = Self.match(in: text, pattern: #"(?i)\b(common|rare|epic|legendary|mythic)\b"#)
-        let role = Self.match(in: text, pattern: #"(?i)\b(mine|mineshaft|elevator|warehouse|transport)\b"#)
-        let stars = Self.countStars(in: text)
-
         let lines = text
             .split(separator: "\n")
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
+
+        return extractFromLines(lines, fullText: text)
+    }
+
+    /// Extract fields using spatial OCR data (preferred — correctly splits Active vs Passive columns).
+    static func extractWithSpatialData(from spatialLines: [OCRTextRecognizer.SpatialLine]) -> OCRFieldExtraction {
+        let fullText = spatialLines.map(\.text).joined(separator: "\n")
+
+        // Find the "Active" and "Passive" header lines to determine column boundaries.
+        let activeHeader = spatialLines.first { $0.text.range(of: "active", options: .caseInsensitive) != nil }
+        let passiveHeader = spatialLines.first { $0.text.range(of: "passive", options: .caseInsensitive) != nil }
+
+        // If we found both headers, split lines by their horizontal position.
+        if let activeH = activeHeader, let passiveH = passiveHeader {
+            // The boundary between columns is between the Active and Passive header centers.
+            let splitX = (activeH.centerX + passiveH.centerX) / 2.0
+
+            // Only consider lines below the headers (lower on screen = higher centerYTopOrigin).
+            let panelTopY = min(activeH.centerYTopOrigin, passiveH.centerYTopOrigin) - 0.02
+
+            let panelLines = spatialLines.filter { $0.centerYTopOrigin >= panelTopY }
+            let leftLines = panelLines.filter { $0.centerX < splitX }
+                .sorted { $0.centerYTopOrigin < $1.centerYTopOrigin }
+                .map(\.text)
+            let rightLines = panelLines.filter { $0.centerX >= splitX }
+                .sorted { $0.centerYTopOrigin < $1.centerYTopOrigin }
+                .map(\.text)
+
+            let activeSection = leftLines.joined(separator: " ")
+            let passiveSection = rightLines.joined(separator: " ")
+
+            return extractFromSections(
+                activeSection: activeSection,
+                passiveSection: passiveSection,
+                fullText: fullText
+            )
+        }
+
+        // Fallback: treat as flat lines.
+        let lines = spatialLines
+            .sorted { $0.centerYTopOrigin < $1.centerYTopOrigin }
+            .map(\.text)
+        return extractFromLines(lines, fullText: fullText)
+    }
+
+    // MARK: - Internal extraction from pre-split sections
+
+    private static func extractFromSections(
+        activeSection: String,
+        passiveSection: String,
+        fullText: String
+    ) -> OCRFieldExtraction {
+        let rarity = Self.match(in: fullText, pattern: #"(?i)\b(common|rare|epic|legendary|mythic)\b"#)
+        let role = Self.match(in: fullText, pattern: #"(?i)\b(mine|mineshaft|elevator|warehouse|transport)\b"#)
+        let stars = Self.parseStars(in: fullText)
+        let fragments = Self.parseFragments(in: fullText)
+
+        let activeEffect = Self.effectDescription(from: activeSection)
+        let passiveEffect = Self.effectDescription(from: passiveSection)
+
+        let activeTyped = Self.firstStatValue(in: activeSection)
+        let passiveTyped = Self.statValues(in: passiveSection, limit: 3)
+
+        let activeMultiplier = (activeTyped?.unit == .x) ? activeTyped?.value : nil
+        let passiveMultiplier = (passiveTyped.first?.unit == .x) ? passiveTyped.first?.value : nil
+
+        let activeDurationSeconds = Self.firstDuration(in: activeSection)
+        let passiveDurationSeconds = Self.firstDuration(in: passiveSection)
+
+        let activeCooldownSeconds = Self.cooldown(in: activeSection)
+            ?? Self.secondDuration(in: activeSection, after: activeDurationSeconds)
+
+        let hasLevelUp = fullText.localizedCaseInsensitiveContains("Level Up")
+        let hasPromote = fullText.localizedCaseInsensitiveContains("Promote")
+        let hasRankUp = fullText.localizedCaseInsensitiveContains("Rank Up")
+
+        return OCRFieldExtraction(
+            rarity: rarity?.capitalized,
+            role: role?.capitalized,
+            stars: stars,
+            fragments: fragments,
+            activeEffect: activeEffect,
+            activeMultiplier: activeMultiplier,
+            activeDurationSeconds: activeDurationSeconds,
+            activeCooldownSeconds: activeCooldownSeconds,
+            activeValue: activeTyped?.value,
+            activeUnit: activeTyped?.unit,
+            passiveEffect: passiveEffect,
+            passiveMultiplier: passiveMultiplier,
+            passiveDurationSeconds: passiveDurationSeconds,
+            passiveValues: passiveTyped,
+            hasLevelUp: hasLevelUp,
+            hasPromote: hasPromote,
+            hasRankUp: hasRankUp
+        )
+    }
+
+    // MARK: - Flat-line fallback
+
+    private static func extractFromLines(_ lines: [String], fullText: String) -> OCRFieldExtraction {
+        let rarity = Self.match(in: fullText, pattern: #"(?i)\b(common|rare|epic|legendary|mythic)\b"#)
+        let role = Self.match(in: fullText, pattern: #"(?i)\b(mine|mineshaft|elevator|warehouse|transport)\b"#)
+        let stars = Self.parseStars(in: fullText)
+        let fragments = Self.parseFragments(in: fullText)
 
         let activeSection = Self.section(containing: "active", from: lines)
         let passiveSection = Self.section(containing: "passive", from: lines)
@@ -45,15 +147,17 @@ struct OCRFieldExtraction {
         let passiveDurationSeconds = Self.firstDuration(in: passiveSection)
 
         let activeCooldownSeconds = Self.cooldown(in: activeSection)
+            ?? Self.secondDuration(in: activeSection, after: activeDurationSeconds)
 
-        let hasLevelUp = text.localizedCaseInsensitiveContains("Level Up")
-        let hasPromote = text.localizedCaseInsensitiveContains("Promote")
-        let hasRankUp = text.localizedCaseInsensitiveContains("Rank Up")
+        let hasLevelUp = fullText.localizedCaseInsensitiveContains("Level Up")
+        let hasPromote = fullText.localizedCaseInsensitiveContains("Promote")
+        let hasRankUp = fullText.localizedCaseInsensitiveContains("Rank Up")
 
         return OCRFieldExtraction(
             rarity: rarity?.capitalized,
             role: role?.capitalized,
             stars: stars,
+            fragments: fragments,
             activeEffect: activeEffect,
             activeMultiplier: activeMultiplier,
             activeDurationSeconds: activeDurationSeconds,
@@ -84,6 +188,93 @@ struct OCRFieldExtraction {
             starCharacters.contains(char) ? partial + 1 : partial
         }
         return count > 0 ? count : nil
+    }
+
+    private static func parseStars(in text: String) -> Int? {
+        if let symbolCount = countStars(in: text) {
+            return symbolCount
+        }
+
+        // Fallback when star glyphs are not recognized by OCR: e.g. "Rank 2"
+        if let rank = matchInt(in: text, pattern: #"(?i)\brank\s*[:#-]?\s*([0-9]{1,2})(?!\s*/)"#) {
+            return max(rank, 0)
+        }
+
+        return nil
+    }
+
+    private static func parseFragments(in text: String) -> Int? {
+        // Preferred: explicit fragment label.
+        if let value = matchInt(
+            in: text,
+            pattern: #"(?i)\bfragment(?:s)?\b[^0-9]{0,10}([0-9]{1,3})\s*/\s*[0-9]{1,4}\b"#
+        ) {
+            return max(value, 0)
+        }
+
+        // Preferred fallback: fraction adjacent to "Rank up".
+        // Handles both:
+        // - "8/30 Rank up"
+        // - "Rank up 8/30"
+        if let value = matchInt(
+            in: text,
+            pattern: #"(?is)\b([0-9]{1,3})\s*/\s*[0-9]{1,4}\b[^a-z0-9]{0,12}rank\s*up\b"#
+        ) {
+            return max(value, 0)
+        }
+        if let value = matchInt(
+            in: text,
+            pattern: #"(?is)\brank\s*up\b[^0-9]{0,12}([0-9]{1,3})\s*/\s*[0-9]{1,4}\b"#
+        ) {
+            return max(value, 0)
+        }
+
+        // Last resort: pick rank-like denominators while filtering obvious level/promotion lines.
+        if let value = firstUnlabeledFragmentProgress(in: text) {
+            return max(value, 0)
+        }
+
+        return nil
+    }
+
+    private static func firstUnlabeledFragmentProgress(in text: String) -> Int? {
+        let pattern = #"([0-9]{1,3})\s*/\s*([0-9]{1,4})\b"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        let matches = regex.matches(in: text, options: [], range: range)
+
+        for match in matches {
+            guard let valueRange = Range(match.range(at: 1), in: text) else { continue }
+            guard let denominatorRange = Range(match.range(at: 2), in: text) else { continue }
+            guard let wholeRange = Range(match.range(at: 0), in: text) else { continue }
+            guard let denominator = Int(text[denominatorRange]), denominator >= 10 else {
+                // Ignore tiny counters like promotion progress (e.g. 1/5).
+                continue
+            }
+
+            let contextStart = text.index(wholeRange.lowerBound, offsetBy: -16, limitedBy: text.startIndex) ?? text.startIndex
+            let contextEnd = text.index(wholeRange.upperBound, offsetBy: 16, limitedBy: text.endIndex) ?? text.endIndex
+            let localContext = text[contextStart..<contextEnd].lowercased()
+
+            // Ignore common non-fragment progress counters.
+            if localContext.contains("level") || localContext.contains("promotion") {
+                continue
+            }
+
+            if let value = Int(text[valueRange]) {
+                return value
+            }
+        }
+
+        return nil
+    }
+
+    private static func matchInt(in text: String, pattern: String) -> Int? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return nil }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        guard let match = regex.firstMatch(in: text, options: [], range: range) else { return nil }
+        guard let captureRange = Range(match.range(at: 1), in: text) else { return nil }
+        return Int(text[captureRange])
     }
 
     private static func section(containing keyword: String, from lines: [String]) -> String {
@@ -169,6 +360,22 @@ struct OCRFieldExtraction {
         guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else { return nil }
         let range = NSRange(section.startIndex..<section.endIndex, in: section)
         guard let match = regex.firstMatch(in: section, options: [], range: range) else { return nil }
+        guard let valueRange = Range(match.range(at: 1), in: section) else { return nil }
+        guard let unitRange = Range(match.range(at: 2), in: section) else { return nil }
+        let value = Int(section[valueRange]) ?? 0
+        let unit = section[unitRange].lowercased()
+        return durationToSeconds(value: value, unit: unit)
+    }
+
+    /// Returns the second duration found in the section (used as cooldown fallback when explicit "cooldown" keyword is absent).
+    private static func secondDuration(in section: String, after firstDurationSeconds: Int?) -> Int? {
+        guard !section.isEmpty else { return nil }
+        let pattern = #"([0-9]{1,3})\s*(h|hr|hrs|hour|hours|m|min|mins|minute|minutes|s|sec|secs|second|seconds)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
+        let range = NSRange(section.startIndex..<section.endIndex, in: section)
+        let matches = regex.matches(in: section, options: [], range: range)
+        guard matches.count >= 2 else { return nil }
+        let match = matches[1]
         guard let valueRange = Range(match.range(at: 1), in: section) else { return nil }
         guard let unitRange = Range(match.range(at: 2), in: section) else { return nil }
         let value = Int(section[valueRange]) ?? 0

@@ -78,3 +78,4 @@ fastlane/test_output
 MineOpsCompanion.xcodeproj/xcshareddata/xcschemes/*.xcscheme
 # Ignore local .env with real keys
 .env
+latest-samples/

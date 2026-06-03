@@ -72,6 +72,7 @@ public final class OCRReviewViewModel: ObservableObject {
                 rarity: fields.rarity,
                 role: fields.role,
                 stars: fields.stars,
+                fragments: fields.fragments,
                 active: RecognizedSM.ActiveInfo(
                     effect: fields.activeEffect,
                     multiplier: fields.activeMultiplier,
@@ -147,6 +148,11 @@ public final class OCRReviewViewModel: ObservableObject {
     /// Reload recognized managers from persistence (e.g., after clearing all data).
     public func reload() {
         recognized = persistence.applyOverrides(to: persistence.loadRecognized())
+    }
+
+    /// Export manager progress in the strict SM tracker backup schema.
+    public func smTrackerExportData() throws -> Data {
+        try SMTrackerExporter.makeExportData(from: recognized)
     }
 
     private func applyMerged(with incoming: [RecognizedSM]) {

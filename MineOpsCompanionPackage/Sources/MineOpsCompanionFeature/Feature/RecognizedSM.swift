@@ -14,6 +14,7 @@ public struct RecognizedSM: Identifiable, Hashable {
   public let rarity: String?
   public let role: String?
   public let stars: Int?
+  public let fragments: Int?
   public let active: ActiveInfo
   public let passive: PassiveInfo
   public let actions: ActionFlags
@@ -148,6 +149,7 @@ public struct RecognizedSM: Identifiable, Hashable {
     rarity: String? = nil,
     role: String? = nil,
     stars: Int? = nil,
+    fragments: Int? = nil,
     active: ActiveInfo = .init(),
     passive: PassiveInfo = .init(),
     actions: ActionFlags = .init()
@@ -164,6 +166,7 @@ public struct RecognizedSM: Identifiable, Hashable {
     self.rarity = rarity
     self.role = role
     self.stars = stars
+    self.fragments = fragments
     self.active = active
     self.passive = passive
     self.actions = actions
@@ -307,6 +310,7 @@ public struct RecognizedSM: Identifiable, Hashable {
       rarity: rarity,
       role: role,
       stars: stars,
+      fragments: fragments,
       active: active,
       passive: passive,
       actions: actions
@@ -327,6 +331,7 @@ public struct RecognizedSM: Identifiable, Hashable {
       rarity: rarity,
       role: role,
       stars: stars,
+      fragments: fragments,
       active: active,
       passive: passive,
       actions: actions
@@ -338,6 +343,7 @@ public struct RecognizedSM: Identifiable, Hashable {
     rarity: String?,
     role: String?,
     stars: Int?,
+    fragments: Int?,
     active: ActiveInfo,
     passive: PassiveInfo,
     actions: ActionFlags
@@ -355,6 +361,7 @@ public struct RecognizedSM: Identifiable, Hashable {
       rarity: rarity.nilIfEmpty,
       role: role.nilIfEmpty,
       stars: stars,
+      fragments: fragments,
       active: active,
       passive: passive,
       actions: actions

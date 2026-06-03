@@ -23,6 +23,62 @@ public enum OCRTextRecognizer {
         }
     }
 
+    /// A recognized text line with its spatial bounding box (in normalized [0,1] coordinates, origin bottom-left).
+    public struct SpatialLine: Sendable {
+        public let text: String
+        /// Normalized bounding box: origin is bottom-left, values in [0, 1].
+        public let boundingBox: CGRect
+        public let confidence: Double
+
+        public init(text: String, boundingBox: CGRect, confidence: Double = 0) {
+            self.text = text
+            self.boundingBox = boundingBox
+            self.confidence = confidence
+        }
+
+        /// The horizontal center of the text line, normalized [0, 1].
+        public var centerX: CGFloat { boundingBox.midX }
+
+        /// The vertical center, flipped so 0 = top, 1 = bottom.
+        public var centerYTopOrigin: CGFloat { 1.0 - boundingBox.midY }
+    }
+
+    /// Recognizes text with spatial (bounding box) data for each line.
+    public static func recognizeTextWithSpatialData(from cgImage: CGImage, usesLanguageCorrection: Bool = true) async -> [SpatialLine] {
+        await withCheckedContinuation { continuation in
+            Task.detached(priority: .userInitiated) {
+                var lines: [SpatialLine] = []
+
+                let request = VNRecognizeTextRequest { req, _ in
+                    guard let observations = req.results as? [VNRecognizedTextObservation] else { return }
+                    for obs in observations {
+                        guard let candidate = obs.topCandidates(1).first else { continue }
+                        lines.append(
+                            SpatialLine(
+                                text: candidate.string,
+                                boundingBox: obs.boundingBox,
+                                confidence: Double(candidate.confidence)
+                            )
+                        )
+                    }
+                }
+
+                request.recognitionLevel = .accurate
+                request.usesLanguageCorrection = usesLanguageCorrection
+                request.recognitionLanguages = ["en-US"]
+
+                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+
+                do {
+                    try handler.perform([request])
+                    continuation.resume(returning: lines)
+                } catch {
+                    continuation.resume(returning: lines)
+                }
+            }
+        }
+    }
+
     /// Recognizes text from the given image using Vision.
     public static func recognizeText(from cgImage: CGImage) async -> String {
         await recognizeText(from: cgImage, usesLanguageCorrection: true)

@@ -53,6 +53,7 @@ func reimportPreservesUserMetadataEdits() throws {
         rarity: original.rarity,
         role: "Warehouse",
         stars: 4,
+        fragments: original.fragments,
         active: original.active,
         passive: original.passive,
         actions: original.actions

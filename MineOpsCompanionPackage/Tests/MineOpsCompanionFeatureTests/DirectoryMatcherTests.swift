@@ -53,4 +53,48 @@ struct DirectoryMatcherTests {
         let match = DirectoryMatcher.bestMatch(in: text, directory: directory)
         #expect(match?.id != "utux")
     }
+
+    @Test("Does not classify Dr. Nova as Dr. Steiner when only 'Dr' overlaps")
+    func doesNotMisclassifyDrNovaAsSteiner() throws {
+        let directory = try SMDirectory.load()
+        let text = """
+        Dr Nova
+        Level: 13/50
+        Active
+        Passive
+        Rank up
+        """
+
+        let match = DirectoryMatcher.bestMatch(in: text, directory: directory)
+        #expect(match?.id != "dr_steiner")
+    }
+
+    @Test("Handles OCR confusion N0va without matching Dr. Steiner")
+    func doesNotMisclassifyDrN0vaAsSteiner() throws {
+        let directory = try SMDirectory.load()
+        let text = """
+        Dr N0va
+        Level: 13/50
+        Active
+        Passive
+        Rank up
+        """
+
+        let match = DirectoryMatcher.bestMatch(in: text, directory: directory)
+        #expect(match?.id != "dr_steiner")
+    }
+
+    @Test("Still matches Dr. Steiner when name token is present")
+    func stillMatchesDrSteiner() throws {
+        let directory = try SMDirectory.load()
+        let text = """
+        Dr Steiner
+        Level: 21/50
+        Active
+        Passive
+        """
+
+        let match = DirectoryMatcher.bestMatch(in: text, directory: directory)
+        #expect(match?.id == "dr_steiner")
+    }
 }

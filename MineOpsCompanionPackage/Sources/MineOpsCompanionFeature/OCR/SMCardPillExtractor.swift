@@ -365,9 +365,9 @@ public enum SMCardPillExtractor {
     let h = sample.height
     if w == 0 || h == 0 { return [] }
 
-    // Limit search to bottom portion and avoid the very bottom buttons.
-    let yStart = Int(Double(h) * 0.55)
-    let yEnd = Int(Double(h) * 0.92)
+    // Limit search to bottom portion where Active/Passive panels appear.
+    let yStart = Int(Double(h) * 0.50)
+    let yEnd = Int(Double(h) * 0.95)
     if yEnd <= yStart { return [] }
 
     let visitedCount = w * h
@@ -413,11 +413,11 @@ public enum SMCardPillExtractor {
         let boxW = maxX - minX + 1
         let boxH = maxY - minY + 1
         let area = boxW * boxH
-        if area < 180 { continue }
+        if area < 100 { continue }
 
         // Filter by aspect and max size to avoid buttons.
         let aspect = Double(boxW) / Double(max(1, boxH))
-        if aspect < 1.2 || aspect > 5.2 { continue }
+        if aspect < 1.0 || aspect > 6.0 { continue }
 
         // Reject very wide components (buttons).
         if Double(boxW) > Double(w) * 0.42 { continue }
@@ -467,18 +467,45 @@ public enum SMCardPillExtractor {
     let (r, g, b, a) = sample.rgba(x: x, y: y)
     if a < 80 { return false }
 
-    // The pills are a light/cyan-ish blue; require blue dominance but not deep blue.
-    if b < 130 || g < 115 { return false }
-    if (b - r) < 18 { return false }
-    if (b - g) < -6 { return false }
-
-    // Avoid very dark areas.
-    if r < 40 && g < 40 && b < 40 { return false }
-
-    // Avoid near-white highlights.
+    // Avoid very dark or near-white areas.
+    if r < 20 && g < 20 && b < 20 { return false }
     if r > 245 && g > 245 && b > 245 { return false }
 
-    return true
+    // Convert to HSB for robust color matching across different screen calibrations.
+    let rf = Double(r) / 255.0
+    let gf = Double(g) / 255.0
+    let bf = Double(b) / 255.0
+
+    let cMax = max(rf, gf, bf)
+    let cMin = min(rf, gf, bf)
+    let delta = cMax - cMin
+
+    // If delta is near zero, it's grayscale — not a pill.
+    if delta < 0.03 { return false }
+
+    let saturation = (cMax > 0) ? (delta / cMax) : 0
+    let brightness = cMax
+
+    var hue: Double
+    if cMax == rf {
+      hue = 60 * (((gf - bf) / delta).truncatingRemainder(dividingBy: 6))
+    } else if cMax == gf {
+      hue = 60 * (((bf - rf) / delta) + 2)
+    } else {
+      hue = 60 * (((rf - gf) / delta) + 4)
+    }
+    if hue < 0 { hue += 360 }
+
+    // The SM card pills are dark steel-blue / navy-blue capsules.
+    // Observed hue range: ~195–230° (steel-blue to blue).
+    // Also accept lighter blue-teal pills: ~180–240°.
+    // Saturation: moderate to strong (0.20–0.90).
+    // Brightness: moderate (0.25–0.85) — distinctly colored, not washed out.
+    let hueMatch = (hue >= 180 && hue <= 240)
+    let satMatch = (saturation >= 0.20 && saturation <= 0.90)
+    let briMatch = (brightness >= 0.25 && brightness <= 0.85)
+
+    return hueMatch && satMatch && briMatch
   }
 
   // MARK: - Preprocessing
