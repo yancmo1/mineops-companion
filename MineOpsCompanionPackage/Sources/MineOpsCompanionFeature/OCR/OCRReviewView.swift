@@ -620,7 +620,6 @@ private extension OCRReviewView {
             let importResult = try review.importSMTrackerData(data)
 
             importError = nil
-            exportError = nil
             progressMessage = "Imported \(importResult.importedCount) managers • added \(importResult.addedCount) • updated \(importResult.updatedCount) • removed \(importResult.removedCount)"
         } catch {
             importError = "Import failed: \(error.localizedDescription)"

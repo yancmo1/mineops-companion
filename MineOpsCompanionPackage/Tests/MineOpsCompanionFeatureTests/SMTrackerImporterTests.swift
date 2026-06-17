@@ -110,8 +110,9 @@ struct SMTrackerImporterTests {
         #expect(syncedMark.tierlistExcluded == true)
 
         #expect(result.recognized.contains { $0.resolvedName == "Unmapped Hero" })
+        let turnerKey = SMTrackerExporter.trackerKey(forDirectoryID: turner.id)
         #expect(result.recognized.contains {
-            SMTrackerExporter.trackerKey(forRecognized: $0) == "mr-turner"
+            SMTrackerExporter.trackerKey(forRecognized: $0) == turnerKey
         } == false)
     }
 

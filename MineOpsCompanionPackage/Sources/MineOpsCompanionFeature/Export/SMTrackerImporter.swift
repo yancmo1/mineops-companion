@@ -31,6 +31,9 @@ enum SMTrackerImporter {
     private static let levelTotal = 50
     private static let promotionTotal = 5
     private static let importSourceText = "Imported from SM tracker backup"
+    private static let displayNameOverrides = [
+        "h4v0c": "H4V0C"
+    ]
 
     static func importRecognized(
         from data: Data,
@@ -176,12 +179,13 @@ private extension SMTrackerImporter {
     }
 
     static func displayName(forKey key: String) -> String {
+        if let override = displayNameOverrides[key] {
+            return override
+        }
+
         key
             .split(separator: "-")
-            .map { token in
-                let lower = token.lowercased()
-                return lower == "h4v0c" ? "H4V0C" : lower.capitalized
-            }
+            .map { $0.lowercased().capitalized }
             .joined(separator: " ")
     }
 
