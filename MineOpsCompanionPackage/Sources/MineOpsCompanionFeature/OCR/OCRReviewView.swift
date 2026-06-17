@@ -1,6 +1,5 @@
 import PhotosUI
 import SwiftUI
-import UniformTypeIdentifiers
 import UIKit
 
 struct OCRReviewView: View {

@@ -30,7 +30,7 @@ enum SMTrackerImportError: LocalizedError {
 enum SMTrackerImporter {
     private static let levelTotal = 50
     private static let promotionTotal = 5
-    private static let importSourceText = "Imported from SM tracker backup"
+    private static let importedManagerRawText = "Imported from SM tracker backup"
     private static let displayNameOverrides = [
         "h4v0c": "H4V0C"
     ]
@@ -154,7 +154,7 @@ private extension SMTrackerImporter {
 
         return RecognizedSM(
             sourceImage: UIImage(),
-            rawText: importSourceText,
+            rawText: importedManagerRawText,
             level: level,
             directoryMatch: directoryMatch,
             resolvedName: directoryMatch?.name ?? displayName(forKey: key),

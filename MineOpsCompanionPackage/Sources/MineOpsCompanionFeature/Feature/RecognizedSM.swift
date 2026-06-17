@@ -15,7 +15,9 @@ public struct RecognizedSM: Identifiable, Hashable {
   public let role: String?
   public let stars: Int?
   public let fragments: Int?
+  /// Whether this manager is excluded from chrono planning in imported/exported tracker backups.
   public let chronoExcluded: Bool
+  /// Whether this manager is excluded from tier list views in imported/exported tracker backups.
   public let tierlistExcluded: Bool
   public let active: ActiveInfo
   public let passive: PassiveInfo

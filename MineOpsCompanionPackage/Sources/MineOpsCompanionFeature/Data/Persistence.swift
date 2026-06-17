@@ -446,7 +446,16 @@ private struct StoredRecognizedSMOverride: Codable {
     }
 
     var isEffectivelyEmpty: Bool {
-        resolvedName == nil && rarity == nil && role == nil && stars == nil && fragments == nil && chronoExcluded == nil && tierlistExcluded == nil && active == nil && passive == nil && actions == nil
+        resolvedName == nil &&
+        rarity == nil &&
+        role == nil &&
+        stars == nil &&
+        fragments == nil &&
+        chronoExcluded == nil &&
+        tierlistExcluded == nil &&
+        active == nil &&
+        passive == nil &&
+        actions == nil
     }
 }
 
