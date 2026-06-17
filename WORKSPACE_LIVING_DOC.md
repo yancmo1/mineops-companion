@@ -143,3 +143,7 @@ Append short entries here when changes affect:
 - This catches accidental key drift (missing/extra/renamed ids) independently of the exporter's in-code key list
 - Added explicit assertions to require `rabbit-blingsley` and forbid `rabbid-blingsley` in exported key universe
 
+### 2026-06-17: Added SM tracker JSON import sync
+- Added Manager-screen JSON import for the strict SM tracker backup format and sync logic that adds, updates, and removes canonical managers based on `unlocked` state.
+- Persisted `chronoExcluded` / `tierlistExcluded` on recognized managers so imported tracker flags round-trip through later exports.
+- Risk/mitigation: import currently requires the full canonical key universe to avoid partial-file deletions; invalid or drifted payloads fail fast with a schema error.

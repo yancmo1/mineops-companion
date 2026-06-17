@@ -15,6 +15,8 @@ public struct RecognizedSM: Identifiable, Hashable {
   public let role: String?
   public let stars: Int?
   public let fragments: Int?
+  public let chronoExcluded: Bool
+  public let tierlistExcluded: Bool
   public let active: ActiveInfo
   public let passive: PassiveInfo
   public let actions: ActionFlags
@@ -150,6 +152,8 @@ public struct RecognizedSM: Identifiable, Hashable {
     role: String? = nil,
     stars: Int? = nil,
     fragments: Int? = nil,
+    chronoExcluded: Bool = false,
+    tierlistExcluded: Bool = false,
     active: ActiveInfo = .init(),
     passive: PassiveInfo = .init(),
     actions: ActionFlags = .init()
@@ -167,6 +171,8 @@ public struct RecognizedSM: Identifiable, Hashable {
     self.role = role
     self.stars = stars
     self.fragments = fragments
+    self.chronoExcluded = chronoExcluded
+    self.tierlistExcluded = tierlistExcluded
     self.active = active
     self.passive = passive
     self.actions = actions
@@ -311,6 +317,8 @@ public struct RecognizedSM: Identifiable, Hashable {
       role: role,
       stars: stars,
       fragments: fragments,
+      chronoExcluded: chronoExcluded,
+      tierlistExcluded: tierlistExcluded,
       active: active,
       passive: passive,
       actions: actions
@@ -332,6 +340,8 @@ public struct RecognizedSM: Identifiable, Hashable {
       role: role,
       stars: stars,
       fragments: fragments,
+      chronoExcluded: chronoExcluded,
+      tierlistExcluded: tierlistExcluded,
       active: active,
       passive: passive,
       actions: actions
@@ -344,6 +354,8 @@ public struct RecognizedSM: Identifiable, Hashable {
     role: String?,
     stars: Int?,
     fragments: Int?,
+    chronoExcluded: Bool? = nil,
+    tierlistExcluded: Bool? = nil,
     active: ActiveInfo,
     passive: PassiveInfo,
     actions: ActionFlags
@@ -362,6 +374,8 @@ public struct RecognizedSM: Identifiable, Hashable {
       role: role.nilIfEmpty,
       stars: stars,
       fragments: fragments,
+      chronoExcluded: chronoExcluded ?? self.chronoExcluded,
+      tierlistExcluded: tierlistExcluded ?? self.tierlistExcluded,
       active: active,
       passive: passive,
       actions: actions

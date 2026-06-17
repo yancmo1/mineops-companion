@@ -155,6 +155,23 @@ public final class OCRReviewViewModel: ObservableObject {
         try SMTrackerExporter.makeExportData(from: recognized)
     }
 
+    public func importSMTrackerData(_ data: Data) throws -> SMTrackerImportResult {
+        let result = try SMTrackerImporter.importRecognized(
+            from: data,
+            existing: recognized,
+            directory: directory
+        )
+
+        let retainedIDs = Set(result.recognized.map(\.id))
+        let removedIDs = recognized.map(\.id).filter { !retainedIDs.contains($0) }
+        for id in removedIDs {
+            persistence.removeOverride(for: id)
+        }
+
+        recognized = persistence.saveRecognized(result.recognized)
+        return result
+    }
+
     private func applyMerged(with incoming: [RecognizedSM]) {
         let merged = merge(current: recognized, incoming: incoming)
         let withOverrides = persistence.applyOverrides(to: merged)

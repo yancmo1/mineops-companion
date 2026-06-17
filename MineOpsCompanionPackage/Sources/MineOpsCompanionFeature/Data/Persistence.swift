@@ -55,6 +55,8 @@ final class Persistence {
                 role: record.role,
                 stars: record.stars,
                 fragments: record.fragments,
+                chronoExcluded: record.chronoExcluded,
+                tierlistExcluded: record.tierlistExcluded,
                 active: record.active?.asDomain ?? .init(),
                 passive: record.passive?.asDomain ?? .init(),
                 actions: record.actions?.asDomain ?? .init()
@@ -132,6 +134,8 @@ final class Persistence {
                     role: item.role,
                     stars: item.stars,
                     fragments: item.fragments,
+                    chronoExcluded: item.chronoExcluded,
+                    tierlistExcluded: item.tierlistExcluded,
                     active: storedActive,
                     passive: storedPassive,
                     actions: storedActions
@@ -194,6 +198,8 @@ private struct StoredRecognizedSM: Codable {
     let role: String?
     let stars: Int?
     let fragments: Int?
+    let chronoExcluded: Bool?
+    let tierlistExcluded: Bool?
     let active: StoredActiveInfo?
     let passive: StoredPassiveInfo?
     let actions: StoredActions?
@@ -212,6 +218,8 @@ private struct StoredRecognizedSM: Codable {
         case role
         case stars
         case fragments
+        case chronoExcluded
+        case tierlistExcluded
         case active
         case passive
         case actions
@@ -230,6 +238,8 @@ private struct StoredRecognizedSM: Codable {
         role: String?,
         stars: Int?,
         fragments: Int?,
+        chronoExcluded: Bool?,
+        tierlistExcluded: Bool?,
         active: StoredActiveInfo?,
         passive: StoredPassiveInfo?,
         actions: StoredActions?
@@ -247,6 +257,8 @@ private struct StoredRecognizedSM: Codable {
         self.role = role
         self.stars = stars
         self.fragments = fragments
+        self.chronoExcluded = chronoExcluded
+        self.tierlistExcluded = tierlistExcluded
         self.active = active
         self.passive = passive
         self.actions = actions
@@ -267,6 +279,8 @@ private struct StoredRecognizedSM: Codable {
         role = try container.decodeIfPresent(String.self, forKey: .role)
         stars = try container.decodeIfPresent(Int.self, forKey: .stars)
         fragments = try container.decodeIfPresent(Int.self, forKey: .fragments)
+        chronoExcluded = try container.decodeIfPresent(Bool.self, forKey: .chronoExcluded)
+        tierlistExcluded = try container.decodeIfPresent(Bool.self, forKey: .tierlistExcluded)
         active = try container.decodeIfPresent(StoredActiveInfo.self, forKey: .active)
         passive = try container.decodeIfPresent(StoredPassiveInfo.self, forKey: .passive)
         actions = try container.decodeIfPresent(StoredActions.self, forKey: .actions)
@@ -286,6 +300,8 @@ private struct StoredRecognizedSM: Codable {
         try container.encodeIfPresent(role, forKey: .role)
         try container.encodeIfPresent(stars, forKey: .stars)
         try container.encodeIfPresent(fragments, forKey: .fragments)
+        try container.encodeIfPresent(chronoExcluded, forKey: .chronoExcluded)
+        try container.encodeIfPresent(tierlistExcluded, forKey: .tierlistExcluded)
         try container.encodeIfPresent(active, forKey: .active)
         try container.encodeIfPresent(passive, forKey: .passive)
         try container.encodeIfPresent(actions, forKey: .actions)
@@ -371,6 +387,8 @@ private struct StoredRecognizedSMOverride: Codable {
     let role: String?
     let stars: Int?
     let fragments: Int?
+    let chronoExcluded: Bool?
+    let tierlistExcluded: Bool?
     let active: StoredRecognizedSM.StoredActiveInfo?
     let passive: StoredRecognizedSM.StoredPassiveInfo?
     let actions: StoredRecognizedSM.StoredActions?
@@ -382,6 +400,8 @@ private struct StoredRecognizedSMOverride: Codable {
         self.role = record.role
         self.stars = record.stars
         self.fragments = record.fragments
+        self.chronoExcluded = record.chronoExcluded
+        self.tierlistExcluded = record.tierlistExcluded
         self.active = record.active.isEmpty ? nil : StoredRecognizedSM.StoredActiveInfo(from: record.active)
         let passiveWithoutUnlockSlots = RecognizedSM.PassiveInfo(
             effect: record.passive.effect,
@@ -401,6 +421,8 @@ private struct StoredRecognizedSMOverride: Codable {
         self.role = original.role != updated.role ? updated.role : nil
         self.stars = original.stars != updated.stars ? updated.stars : nil
         self.fragments = original.fragments != updated.fragments ? updated.fragments : nil
+        self.chronoExcluded = original.chronoExcluded != updated.chronoExcluded ? updated.chronoExcluded : nil
+        self.tierlistExcluded = original.tierlistExcluded != updated.tierlistExcluded ? updated.tierlistExcluded : nil
 
         self.active = original.active != updated.active ? (updated.active.isEmpty ? nil : StoredRecognizedSM.StoredActiveInfo(from: updated.active)) : nil
 
@@ -424,7 +446,7 @@ private struct StoredRecognizedSMOverride: Codable {
     }
 
     var isEffectivelyEmpty: Bool {
-        resolvedName == nil && rarity == nil && role == nil && stars == nil && fragments == nil && active == nil && passive == nil && actions == nil
+        resolvedName == nil && rarity == nil && role == nil && stars == nil && fragments == nil && chronoExcluded == nil && tierlistExcluded == nil && active == nil && passive == nil && actions == nil
     }
 }
 
@@ -469,10 +491,11 @@ private extension RecognizedSM {
             role: stored.role ?? role,
             stars: stored.stars ?? stars,
             fragments: stored.fragments ?? fragments,
+            chronoExcluded: stored.chronoExcluded ?? chronoExcluded,
+            tierlistExcluded: stored.tierlistExcluded ?? tierlistExcluded,
             active: activeOverride,
             passive: passiveOverride,
             actions: stored.actions?.asDomain ?? actions
         )
     }
 }
-

@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
 import UIKit
 
 struct OCRReviewView: View {
@@ -18,6 +19,7 @@ struct OCRReviewView: View {
     @State private var exportFileURL: URL?
     @State private var showingExportSheet = false
     @State private var exportError: String?
+    @State private var showingSMTrackerImporter = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -256,6 +258,12 @@ struct OCRReviewView: View {
                         }
 
                         Button {
+                            showingSMTrackerImporter = true
+                        } label: {
+                            Label("Import SM Tracker Backup", systemImage: "square.and.arrow.down")
+                        }
+
+                        Button {
                             exportSMTrackerBackup()
                         } label: {
                             Label("Export SM Tracker Backup", systemImage: "square.and.arrow.up")
@@ -280,6 +288,13 @@ struct OCRReviewView: View {
         }
         .sheet(isPresented: $showingSettings) {
             MineOpsSettingsView()
+        }
+        .fileImporter(
+            isPresented: $showingSMTrackerImporter,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            handleSMTrackerImport(result)
         }
         .sheet(isPresented: $isEditingManager, onDismiss: {
             editingRecord = nil
@@ -586,6 +601,29 @@ private extension OCRReviewView {
             showingExportSheet = true
         } catch {
             exportError = "Export failed: \(error.localizedDescription)"
+        }
+    }
+
+    func handleSMTrackerImport(_ result: Result<[URL], Error>) {
+        do {
+            let urls = try result.get()
+            guard let url = urls.first else { return }
+
+            let didAccess = url.startAccessingSecurityScopedResource()
+            defer {
+                if didAccess {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            let data = try Data(contentsOf: url, options: .mappedIfSafe)
+            let importResult = try review.importSMTrackerData(data)
+
+            importError = nil
+            exportError = nil
+            progressMessage = "Imported \(importResult.importedCount) managers • added \(importResult.addedCount) • updated \(importResult.updatedCount) • removed \(importResult.removedCount)"
+        } catch {
+            importError = "Import failed: \(error.localizedDescription)"
         }
     }
 

@@ -54,6 +54,8 @@ enum SMTrackerExporter {
             item.level = max(manager.stats.level?.current ?? manager.level ?? 1, 1)
             item.promoted = max(manager.stats.promotion?.current ?? 0, 0)
             item.fragments = max(manager.fragments ?? 0, 0)
+            item.chronoExcluded = manager.chronoExcluded
+            item.tierlistExcluded = manager.tierlistExcluded
 
             payload[key] = item
         }
