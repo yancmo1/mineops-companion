@@ -191,7 +191,7 @@ struct SMTrackerImporterTests {
         }
         """
 
-        let data = try #require(json.data(using: .utf8))
+        let data = json.data(using: .utf8)!
         return try JSONDecoder().decode(SMDirectoryEntry.self, from: data)
     }
 }

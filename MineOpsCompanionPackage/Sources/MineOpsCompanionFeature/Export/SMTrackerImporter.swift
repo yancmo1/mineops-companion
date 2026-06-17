@@ -183,7 +183,7 @@ private extension SMTrackerImporter {
             return override
         }
 
-        key
+        return key
             .split(separator: "-")
             .map { $0.lowercased().capitalized }
             .joined(separator: " ")
