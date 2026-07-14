@@ -30,5 +30,6 @@ public struct CardContainer<Content: View>: View {
                 .stroke(Color.accentCyan.opacity(0.25), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.07), radius: 4, x: 0, y: 2)
+        .frame(maxWidth: .infinity)
     }
 }

@@ -54,7 +54,14 @@ struct V2ManagersView: View {
     @Environment(SMProgressService.self) private var progressService
 
     @State private var searchText = ""
-    @State private var selectedFilter: SMDepartment?
+    @State private var selectedDepartment: SMDepartment?
+    @State private var ownershipFilter: ManagerOwnershipFilter = .unlocked
+    @State private var sortOption: ManagerSortOption = .recommended
+    @State private var showAdvancedFilters = false
+    @State private var selectedRarities: Set<String> = []
+    @State private var upgradeReadyOnly = false
+
+    private let rarityOptions = ["legendary", "epic", "rare", "common"]
 
     var body: some View {
         NavigationStack {
@@ -66,75 +73,188 @@ struct V2ManagersView: View {
 
                 // Grid
                 ScrollView {
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 12)],
-                        spacing: 12
-                    ) {
-                        ForEach(filteredSMs) { sm in
-                            NavigationLink(destination: V2ManagerDetailView(sm: sm)) {
-                                V2SMCardView(sm: sm)
+                    if filteredSMs.isEmpty {
+                        emptyState
+                            .padding(.horizontal)
+                            .padding(.top, 24)
+                    } else {
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 12)],
+                            spacing: 12
+                        ) {
+                            ForEach(filteredSMs) { sm in
+                                NavigationLink(destination: V2ManagerDetailView(sm: sm)) {
+                                    V2SMCardView(sm: sm)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(.horizontal)
+                        .padding(.bottom)
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom)
                 }
             }
             .background(Color.mineDark.ignoresSafeArea())
             .navigationTitle("Super Managers")
             .searchable(text: $searchText, prompt: "Search managers…")
+            .sheet(isPresented: $showAdvancedFilters) {
+                advancedFiltersSheet
+            }
         }
     }
 
     private var filterBar: some View {
-        HStack(spacing: 8) {
-            filterChip("All", department: nil)
-            ForEach(SMDepartment.allCases, id: \.self) { dept in
-                filterChip(dept.displayName, department: dept)
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                filterChip("All", department: nil)
+                ForEach(SMDepartment.allCases, id: \.self) { dept in
+                    filterChip(dept.displayName, department: dept)
+                }
+                Spacer()
             }
-            Spacer()
-            Text("\(progressService.unlockedCount)/\(progressService.totalCount)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+
+            HStack(spacing: 10) {
+                Picker("Ownership", selection: $ownershipFilter) {
+                    ForEach(ManagerOwnershipFilter.allCases) { ownership in
+                        Text(ownership.displayName).tag(ownership)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Menu {
+                    Section("Sort") {
+                        ForEach(ManagerSortOption.allCases) { option in
+                            Button {
+                                sortOption = option
+                            } label: {
+                                Label(option.displayName, systemImage: sortOption == option ? "checkmark" : "")
+                            }
+                        }
+                    }
+
+                    Section("Filters") {
+                        Button {
+                            showAdvancedFilters = true
+                        } label: {
+                            Label("Advanced Filters", systemImage: "line.3.horizontal.decrease.circle")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.headline)
+                        .foregroundStyle(Color.accentCyan)
+                        .padding(8)
+                        .background(Color.mineDarkLight)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
+                Text("\(filteredSMs.count)")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(Color.mineDarkLight)
+                    .clipShape(Capsule())
+                    .accessibilityIdentifier("managersResultCount")
+            }
         }
     }
 
     private func filterChip(_ label: String, department: SMDepartment?) -> some View {
         Button {
             withAnimation(.easeInOut(duration: 0.2)) {
-                selectedFilter = department
-                searchText = ""
+                selectedDepartment = department
             }
         } label: {
             Text(label)
                 .font(.caption.bold())
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(selectedFilter == department ? Color.accentCyan : Color.mineDarkLight)
-                .foregroundStyle(selectedFilter == department ? Color.mineDark : .white)
+                .background(selectedDepartment == department ? Color.accentCyan : Color.mineDarkLight)
+                .foregroundStyle(selectedDepartment == department ? Color.mineDark : .white)
                 .clipShape(Capsule())
         }
     }
 
     private var filteredSMs: [SMProgress] {
-        var items = progressService.progress
+        let query = ManagerListQuery(
+            searchText: searchText,
+            department: selectedDepartment,
+            ownership: ownershipFilter,
+            selectedRarities: selectedRarities,
+            upgradeReadyOnly: upgradeReadyOnly,
+            sort: sortOption
+        )
 
-        if let dept = selectedFilter {
-            items = items.filter { $0.areaEnum == dept }
-        }
+        return query.apply(to: progressService.progress, progressService: progressService)
+    }
 
-        if !searchText.isEmpty {
-            items = items.filter {
-                $0.master.name.localizedCaseInsensitiveContains(searchText)
+    private var advancedFiltersSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Rarity") {
+                    ForEach(rarityOptions, id: \.self) { rarity in
+                        Toggle(isOn: Binding(
+                            get: { selectedRarities.contains(rarity) },
+                            set: { enabled in
+                                if enabled {
+                                    selectedRarities.insert(rarity)
+                                } else {
+                                    selectedRarities.remove(rarity)
+                                }
+                            }
+                        )) {
+                            Text(rarity.capitalized)
+                        }
+                    }
+                }
+
+                Section("Readiness") {
+                    Toggle("Rank-up Ready Only", isOn: $upgradeReadyOnly)
+                }
+
+                Section {
+                    Button("Clear Filters") {
+                        selectedRarities = []
+                        upgradeReadyOnly = false
+                    }
+                    .accessibilityIdentifier("managersClearFiltersButton")
+                }
+            }
+            .navigationTitle("Advanced Filters")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { showAdvancedFilters = false }
+                }
             }
         }
+    }
 
-        // Put unlocked first, then by name
-        return items.sorted {
-            if $0.unlocked != $1.unlocked { return $0.unlocked }
-            return $0.master.name < $1.master.name
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            if ownershipFilter == .unlocked && progressService.unlockedCount == 0 {
+                Text("No unlocked managers are available yet.")
+                    .font(.headline)
+                Text("Sync your game data to refresh MineOps.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("No managers match \"\(searchText)\".")
+                    .font(.headline)
+            } else {
+                Text("No managers match the selected filters.")
+                    .font(.headline)
+                Button("Clear Filters") {
+                    selectedDepartment = nil
+                    selectedRarities = []
+                    upgradeReadyOnly = false
+                    ownershipFilter = .unlocked
+                    sortOption = .recommended
+                }
+                .buttonStyle(.bordered)
+            }
         }
+        .multilineTextAlignment(.center)
     }
 }
 
@@ -171,7 +291,7 @@ struct V2SMCardView: View {
                         .font(.system(size: 9))
                         .foregroundStyle(rarityColor(sm.master.rarity))
                     Spacer()
-                    Text(sm.areaEnum.displayName.prefix(3).uppercased())
+                    Text(sm.areaEnum.displayName)
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(areaColor(sm.areaEnum))
                 }
@@ -191,6 +311,22 @@ struct V2SMCardView: View {
                         }
                     }
                     .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("managerCardUnlockedStats_\(sm.id)")
+
+                    if SMProgressService.shared.isRankUpReady(sm) {
+                        Text("Ready to Rank Up")
+                            .font(.system(size: 10, weight: .semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.green.opacity(0.2))
+                            .foregroundStyle(Color.green)
+                            .clipShape(Capsule())
+                            .accessibilityIdentifier("managerCardRankReady_\(sm.id)")
+                    }
+                } else if sm.fragments > 0 {
+                    Text("\(sm.fragments) fragments")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.orange)
                 }
             }
             .padding(8)

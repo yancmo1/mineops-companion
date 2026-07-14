@@ -189,3 +189,14 @@ Append short entries here when changes affect:
 - Updated `ContentView` tab wiring with `V2RootTab` selection so Today quick actions can jump directly to Managers/Strategy tabs.
 - Validation: `xcodebuild ... test` succeeded on simulator `C76053FB-D4EB-4736-B906-6D8CF2976C10` after resolving compile-time SwiftUI inference/style issues.
 
+### 2026-07-14: Phase 8+ follow-through (Managers + More IA + sync frequency cleanup)
+- Implemented Managers screen improvements: unlocked-only default scope, ownership filter (`Unlocked/All/Locked`), deterministic sorting options (`Recommended/Name/Level/Rank/Promotion/Rarity/Fragments`), advanced rarity + rank-ready filters, improved empty states, and improved card readability (full department labels, locked-fragment visibility, rank-ready badge when known threshold data exists).
+- Added `ManagerListQuery` service and `ManagerFilteringTests` to verify default unlocked filtering, department filter correctness, search+ownership combination, and deterministic recommendation tie-break ordering.
+- Introduced `SyncFrequency` (`Off/1h/6h/12h/24h`) and removed effective 30-second polling behavior from `KolibriSyncService` (legacy auto-sync APIs are now no-op shims).
+- Updated launch sync orchestration to honor frequency freshness when non-off, while still supporting launch sync behavior with shared metadata.
+- Restructured `V2MoreView` information architecture: game connection status/freshness summary, Sync Now action, game connection settings, diagnostics route, sync preferences, strategy/data settings links, and about section.
+- Added strategy freshness UX in `V2StrategyView` ("using roster synced … ago") with in-context Sync Now action.
+- Hardened master-data reliability by adding source tracking (`MasterDataSource`) plus cached snapshot fallback and bundled fallback loading in `SMMasterDataService`.
+- Added `SyncFrequencyTests` covering interval values and due/not-due freshness behavior.
+- Validation: ran `xcodebuild -quiet ... test` on simulator `C76053FB-D4EB-4736-B906-6D8CF2976C10` after changes; test invocation completed successfully.
+

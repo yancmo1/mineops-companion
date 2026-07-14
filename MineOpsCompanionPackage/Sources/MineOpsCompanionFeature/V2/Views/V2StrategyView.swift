@@ -4,6 +4,8 @@ struct V2StrategyView: View {
     @Environment(SMProgressService.self) private var progressService
     @State private var strategyService = V2StrategyService.shared
     @State private var config = AIProviderConfig.shared
+    @State private var syncService = KolibriSyncService.shared
+    @State private var metadataStore = SyncMetadataStore.shared
 
     // Mine context
     @State private var selectedMineType: MineType = MineSettingsStore.shared.selectedMineType
@@ -20,6 +22,7 @@ struct V2StrategyView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: MineOpsLayout.sectionSpacing) {
+                    strategyFreshnessCard
 
                     // Provider info
                     CardContainer(title: "AI Provider") {
@@ -73,6 +76,41 @@ struct V2StrategyView: View {
             }
             .background(Color.mineDark.ignoresSafeArea())
             .navigationTitle("Strategy")
+        }
+    }
+
+    private var strategyFreshnessCard: some View {
+        CardContainer(title: "Roster Freshness") {
+            VStack(alignment: .leading, spacing: 8) {
+                if let syncedAt = metadataStore.metadata.lastSuccessfulSyncAt {
+                    HStack(spacing: 4) {
+                        Text("Using roster synced")
+                            .mineOpsBody()
+                        Text(syncedAt, style: .relative)
+                            .mineOpsBody()
+                        Text("ago")
+                            .mineOpsBody()
+                    }
+                } else {
+                    Text("Sync your game before building a strategy.")
+                        .mineOpsBody()
+                        .foregroundStyle(.orange)
+                }
+
+                if syncService.syncState == .syncing {
+                    Text("Syncing game data…")
+                        .mineOpsCaption()
+                        .foregroundStyle(.secondary)
+                }
+
+                Button {
+                    Task { await syncService.syncAndApplyToProgress() }
+                } label: {
+                    Label(syncService.syncState == .syncing ? "Syncing…" : "Sync Now", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.bordered)
+                .disabled(syncService.syncState == .syncing)
+            }
         }
     }
 

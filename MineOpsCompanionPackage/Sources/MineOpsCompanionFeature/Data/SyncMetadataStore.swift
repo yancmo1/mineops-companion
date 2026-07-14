@@ -1,6 +1,7 @@
 import Foundation
 
 @MainActor
+@Observable
 public final class SyncMetadataStore {
     public static let shared = SyncMetadataStore()
 
@@ -46,6 +47,14 @@ public final class SyncMetadataStore {
         metadata.maskedPlayerID = maskedPlayerID
         metadata.payloadFormat = payloadFormat
         metadata.appBuild = appBuild ?? Self.currentAppBuild()
+        save()
+    }
+
+    /// Record a list of recently-updated manager ids (master.id strings). This is used by the
+    /// UI to surface recent changes after an authoritative sync is applied.
+    public func recordRecentUpdates(_ ids: [String]) {
+        metadata.recentlyUpdatedManagerIDs = ids
+        metadata.recentUpdateAt = Date()
         save()
     }
 

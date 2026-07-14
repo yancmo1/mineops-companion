@@ -24,6 +24,15 @@ final class AppLaunchCoordinator {
         await progressService.initialize()
 
         guard syncService.hasUsableCredentials else { return }
+
+        // Always allow one sync on launch when frequency is Off.
+        // For scheduled frequencies, sync only when due based on the last successful sync timestamp.
+        let frequency = syncService.syncFrequency
+        let lastSuccessfulSync = SyncMetadataStore.shared.metadata.lastSuccessfulSyncAt
+        if frequency != .off, !frequency.isDue(lastSuccessfulSyncAt: lastSuccessfulSync) {
+            return
+        }
+
         await syncService.syncAndApplyToProgress()
     }
 }

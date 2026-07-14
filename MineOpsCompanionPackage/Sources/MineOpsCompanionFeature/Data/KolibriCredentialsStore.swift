@@ -12,10 +12,23 @@ public final class KolibriCredentialsStore {
 
     /// Returns the resolved Kolibri ID (Keychain -> env -> nil). Empty string if not present.
     public var kolibriId: String {
-        get { KolibriKeyStore.shared.resolvedKolibriID() ?? "" }
+        get {
+            let raw = KolibriKeyStore.shared.resolvedKolibriID() ?? ""
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return "" }
+
+            // Accept full pasted debug strings and normalize to the final UUID.
+            if let parsed = KolibriDebugIDParser.extractLastUUID(from: trimmed) {
+                return parsed
+            }
+
+            return trimmed
+        }
         set {
             do {
-                try KolibriKeyStore.shared.saveKolibriID(newValue.trimmingCharacters(in: .whitespacesAndNewlines))
+                let candidate = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                let normalized = KolibriDebugIDParser.extractLastUUID(from: candidate) ?? candidate
+                try KolibriKeyStore.shared.saveKolibriID(normalized)
             } catch {
                 // Swallow errors silently; callers should surface UX-level errors when saving.
             }

@@ -21,7 +21,8 @@ public final class SMProgressService {
 
     /// Initialize or refresh progress from master data + sync.
     public func initialize() async {
-        if masterService.masterData.isEmpty {
+        // Always try to upgrade bundled/cache fallback data to full remote master data.
+        if masterService.masterData.isEmpty || masterService.currentSource != .remote {
             await masterService.refresh()
         }
 
@@ -48,12 +49,15 @@ public final class SMProgressService {
 
     /// Merge synced manager data from Kolibri into progress, matching by gameId.
     public func applySyncData(managers: [ManagerData]) async {
-        // Ensure master data is loaded
-        if masterService.masterData.isEmpty {
+        // Ensure master data is loaded and prefer remote definitions when available.
+        if masterService.masterData.isEmpty || masterService.currentSource != .remote {
             await masterService.refresh()
         }
 
         guard !masterService.masterData.isEmpty else { return }
+        // Keep previous snapshot to detect changes
+        let previousProgress = progress
+
         // Build fresh defaults for all master entries
         var updated: [Int: SMProgress] = [:]
         for entry in masterService.masterData {
@@ -80,8 +84,32 @@ public final class SMProgressService {
         }
 
         // Replace progress atomically
-        progress = updated.values.sorted { $0.master.name < $1.master.name }
+        let newProgress = updated.values.sorted { $0.master.name < $1.master.name }
+
+        // Compute which managers changed compared to previous progress so UI can highlight
+        var changedIDs: [String] = []
+        let previousByGameId = Dictionary(uniqueKeysWithValues: previousProgress.map { ($0.master.gameId, $0) })
+
+        for prog in newProgress {
+            let gid = prog.master.gameId
+            if let old = previousByGameId[gid] {
+                if old.unlocked != prog.unlocked || old.level != prog.level || old.rank != prog.rank || old.promoted != prog.promoted || old.fragments != prog.fragments {
+                    changedIDs.append(prog.master.id)
+                }
+            } else {
+                // Previously absent entry; if now unlocked consider it a change
+                if prog.unlocked {
+                    changedIDs.append(prog.master.id)
+                }
+            }
+        }
+
+        progress = newProgress
         saveToDisk()
+
+        // Persist recently-updated manager ids for UI consumption
+        SyncMetadataStore.shared.recordRecentUpdates(changedIDs)
+
         logger.info("Applied authoritative sync data: \(self.progress.filter(\.unlocked).count) unlocked SMs")
     }
 
@@ -184,6 +212,38 @@ public final class SMProgressService {
             }
             .prefix(limit)
             .map { $0 }
+    }
+
+    /// Returns true only when this service has a known rank-up threshold and the manager meets/exceeds it.
+    /// Unknown thresholds intentionally return false rather than guessing.
+    public func isRankUpReady(_ manager: SMProgress) -> Bool {
+        guard manager.unlocked,
+              let threshold = knownFragmentThreshold(forRank: manager.rank)
+        else {
+            return false
+        }
+
+        return manager.fragments >= threshold
+    }
+
+    public func knownFragmentThreshold(forRank rank: Int) -> Int? {
+        switch rank {
+        case 0: return 15
+        case 1: return 30
+        case 2: return 50
+        case 3: return 80
+        default: return nil
+        }
+    }
+
+    public func raritySortWeight(for rarity: String) -> Int {
+        switch rarity.lowercased() {
+        case "legendary": return 4
+        case "epic": return 3
+        case "rare": return 2
+        case "common": return 1
+        default: return 0
+        }
     }
 
     private func rarityWeight(for rarity: String) -> Double {

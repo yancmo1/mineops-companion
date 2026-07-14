@@ -384,6 +384,11 @@ public final class KolibriAPIClient: Sendable {
         let cleaned = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return [] }
 
+        // If a debug string contains multiple UUIDs, the final UUID is the known-good Kolibri player ID.
+        if let parsed = KolibriDebugIDParser.extractLastUUID(from: cleaned) {
+            return [parsed]
+        }
+
         var candidates: [String] = []
 
         // 1) Original input first.

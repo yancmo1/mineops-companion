@@ -28,29 +28,25 @@ public final class KolibriSyncService {
     
     // MARK: - Configuration
     
-    public var autoSyncEnabled: Bool {
+    public var syncFrequency: SyncFrequency {
         get {
-            UserDefaults.standard.bool(forKey: "com.yancmo1.mineops.autoSyncEnabled")
+            guard let rawValue = UserDefaults.standard.string(forKey: "com.yancmo1.mineops.syncFrequency"),
+                  let frequency = SyncFrequency(rawValue: rawValue) else {
+                return .off
+            }
+            return frequency
         }
         set {
-            UserDefaults.standard.set(newValue, forKey: "com.yancmo1.mineops.autoSyncEnabled")
-            if newValue {
-                startAutoSync()
-            } else {
-                stopAutoSync()
-            }
+            UserDefaults.standard.set(newValue.rawValue, forKey: "com.yancmo1.mineops.syncFrequency")
         }
     }
-    
-    public var syncInterval: TimeInterval {
-        get {
-            let interval = UserDefaults.standard.double(forKey: "com.yancmo1.mineops.syncInterval")
-            return interval > 0 ? interval : 30.0 // Default 30 seconds
-        }
+
+    // Backward-compatible shim for legacy UI state.
+    public var autoSyncEnabled: Bool {
+        get { syncFrequency != .off }
         set {
-            UserDefaults.standard.set(newValue, forKey: "com.yancmo1.mineops.syncInterval")
-            if autoSyncEnabled {
-                restartAutoSync()
+            if !newValue {
+                syncFrequency = .off
             }
         }
     }
@@ -61,17 +57,12 @@ public final class KolibriSyncService {
     private let credentialsStore = KolibriCredentialsStore.shared
     private let logger = Logger(subsystem: "com.yancmo1.mineops", category: "KolibriSync")
     
-    private var syncTask: Task<Void, Never>?
-    
     // MARK: - Initialization
 
     private init() {
         UserDefaults.standard.register(defaults: [
-            "com.yancmo1.mineops.autoSyncEnabled": false,
-            "com.yancmo1.mineops.syncInterval": 30.0
+            "com.yancmo1.mineops.syncFrequency": SyncFrequency.off.rawValue
         ])
-        // NOTE: Keep initialization lightweight. Do not start auto-sync by default.
-        // Start auto-sync only when explicitly enabled by the user.
     }
     
     // MARK: - Public Methods
@@ -199,41 +190,19 @@ public final class KolibriSyncService {
         lastImportedManagerCount = count
     }
     
-    /// Start automatic syncing at the configured interval
+    /// Legacy no-op. Repeating in-session sync loops are intentionally disabled.
     public func startAutoSync() {
-        stopAutoSync() // Cancel any existing task
-
-        // Instead of a continuous background loop, schedule a single delayed sync.
-        // This avoids continuous background network activity while preserving a simple scheduled option.
-        syncTask = Task { [weak self] in
-            guard let self else { return }
-
-            logger.info("Scheduled one-off sync in \(self.syncInterval)s")
-
-            // Wait for the configured interval, then perform a single sync.
-            try? await Task.sleep(for: .seconds(syncInterval))
-            guard !Task.isCancelled else {
-                logger.info("Scheduled sync cancelled before running")
-                return
-            }
-
-            await self.sync()
-            logger.info("Scheduled one-off sync completed")
-            self.syncTask = nil
-        }
+        logger.info("startAutoSync called; repeating sync is disabled in V2")
     }
     
-    /// Stop automatic syncing
+    /// Legacy no-op.
     public func stopAutoSync() {
-        syncTask?.cancel()
-        syncTask = nil
+        logger.info("stopAutoSync called; repeating sync is disabled in V2")
     }
     
-    /// Restart auto-sync (useful when interval changes)
+    /// Legacy no-op.
     private func restartAutoSync() {
-        if autoSyncEnabled {
-            startAutoSync()
-        }
+        logger.info("restartAutoSync called; repeating sync is disabled in V2")
     }
     
     // MARK: - Helper Methods

@@ -83,22 +83,16 @@ struct KolibriSyncView: View {
                     .foregroundStyle(.secondary)
             }
 
-            DisclosureGroup("Optional Auto-Sync") {
-                Toggle("Enable Auto-Sync", isOn: $syncService.autoSyncEnabled)
-                    .accessibilityIdentifier("autoSyncToggle")
-
-                HStack {
-                    Text("Interval")
-                    Spacer()
-                    Picker("Interval", selection: $syncService.syncInterval) {
-                        Text("10s").tag(10.0)
-                        Text("30s").tag(30.0)
-                        Text("1m").tag(60.0)
-                        Text("2m").tag(120.0)
-                        Text("5m").tag(300.0)
+            HStack {
+                Text("Launch Refresh")
+                Spacer()
+                Picker("Launch Refresh", selection: $syncService.syncFrequency) {
+                    ForEach(SyncFrequency.allCases) { frequency in
+                        Text(frequency.displayName).tag(frequency)
                     }
-                    .pickerStyle(.menu)
                 }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("syncFrequencyPicker")
             }
 
             if let importedCount = syncService.lastImportedManagerCount {
@@ -126,6 +120,9 @@ struct KolibriSyncView: View {
 
     private var debugSection: some View {
         Section("Sync Debug") {
+            debugRow("Master Source", masterService.currentSource.rawValue)
+            debugRow("Master Entries", "\(masterService.masterData.count)")
+
             if let diagnostics = syncService.lastDiagnostics {
                 debugRow("HTTP Status", "\(diagnostics.statusCode)")
                 debugRow("Payload Format", diagnostics.payloadFormat)

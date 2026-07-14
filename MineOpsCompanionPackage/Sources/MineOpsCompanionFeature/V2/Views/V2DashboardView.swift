@@ -15,10 +15,11 @@ struct V2DashboardView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: MineOpsLayout.sectionSpacing) {
-                    syncStatusHeader
+                    latestUpdatedSection
                     strongestByAreaSection
                     upgradeOpportunitiesSection
                     quickActionsSection
+                    syncStatusHeader
                     collectionSection
                     areaCoverage
                 }
@@ -27,6 +28,43 @@ struct V2DashboardView: View {
             .background(Color.mineDark.ignoresSafeArea())
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
+        }
+    }
+
+    private var latestUpdatedSection: some View {
+        CardContainer(title: "Recently updated") {
+            let ids = metadataStore.metadata.recentlyUpdatedManagerIDs ?? []
+            if ids.isEmpty {
+                Text("No recent changes")
+                    .mineOpsCaption()
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(ids.prefix(6), id: \.self) { id in
+                        if let manager = progressService.progress.first(where: { $0.master.id == id }) {
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(manager.master.name)
+                                        .font(.subheadline.bold())
+                                    Text("Lv\(manager.level) • R\(manager.rank) • P\(manager.promoted)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                // Simple highlight badge to indicate a recent change
+                                Text("Updated")
+                                    .font(.caption2.bold())
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 10)
+                                    .background(Color.accentCyan.opacity(0.12))
+                                    .foregroundStyle(Color.accentCyan)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+            }
         }
     }
 
