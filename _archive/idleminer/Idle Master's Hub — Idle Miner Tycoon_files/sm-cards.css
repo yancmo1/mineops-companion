@@ -1,0 +1,646 @@
+/* SM Tracker + Chrono Planner styles
+   Shared by the standalone Pages frontend views */
+
+/* --- Body background (standalone page) --- */
+body.sm-chrono-standalone {
+  font-family: var(--font-body);
+  background: var(--surface-800);
+  min-height: 100vh;
+}
+
+body.sm-chrono-standalone::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, rgba(245, 215, 122, 0.6), transparent),
+    radial-gradient(2px 2px at 40px 70px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 90px 40px, rgba(245, 215, 122, 0.4), transparent),
+    radial-gradient(1px 1px at 130px 80px, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(2px 2px at 160px 30px, rgba(212, 169, 55, 0.3), transparent);
+  background-repeat: repeat;
+  background-size: 200px 100px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sm-card,
+  .tierlist-item,
+  .tip-btn,
+  .fm-view-btn,
+  .sm-fragment-fill,
+  .chrono-slot,
+  .chrono-panel-card,
+  .pass-checkbox {
+    transition: none !important;
+  }
+}
+
+/* --- Site title link (logo behavior) --- */
+.site-title-link {
+  text-decoration: none;
+  color: inherit;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+  display: inline-block;
+}
+.site-title-link:hover {
+  color: inherit;
+}
+
+/* --- Site title (standalone page) --- */
+.site-title {
+  font-family: var(--font-display);
+  font-size: 3.2rem;
+  font-weight: 900;
+  color: var(--accent-gold-light);
+  filter: drop-shadow(0 2px 8px var(--accent-gold-glow));
+  line-height: 1.3;
+  letter-spacing: 2px;
+  padding-top: 1.8rem;
+  margin-bottom: 0;
+}
+.site-title .correction {
+  display: inline-block;
+  position: relative;
+}
+.site-title .correction .original {
+  text-decoration: none;
+  color: var(--accent-gold-glow);
+}
+.site-title .correction .scratch-line {
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 0.6em;
+  pointer-events: none;
+}
+.site-title .correction .handwritten {
+  position: absolute;
+  white-space: nowrap;
+  font-family: var(--font-correction);
+  font-size: 2.4rem;
+  color: #ff6b6b;
+  transform: rotate(-5deg);
+  top: -1.4em;
+  left: -0.1em;
+  text-shadow: 0 2px 10px rgba(255, 107, 107, 0.5);
+  letter-spacing: 0;
+}
+.site-subtitle {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--accent-gold-glow);
+  display: inline-block;
+}
+
+/* --- Tab styling (standalone page) --- */
+.sm-chrono-standalone .nav-tabs .nav-link {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-right: 5px;
+}
+
+.sm-chrono-standalone .nav-tabs .nav-link.active {
+  background: var(--content-bg);
+  color: var(--accent-primary);
+  border-color: #dee2e6 #dee2e6 var(--content-bg);
+}
+
+.sm-chrono-standalone .tab-content {
+  background: var(--content-bg);
+  border-radius: 0 var(--radius-md) var(--radius-md) var(--radius-md);
+  padding: var(--space-xl);
+}
+
+/* --- Credit line (bottom-right of dark header) --- */
+.site-credit {
+  display: block;
+  max-width: min(100%, 48rem);
+  margin: 0 0 4px auto;
+  text-align: right;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+}
+.site-credit strong {
+  color: rgba(255, 255, 255, 0.8);
+}
+.site-credit a {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: underline;
+  pointer-events: auto;
+}
+.site-credit a:hover {
+  color: #fff;
+}
+
+/* --- Theme toggle (top-right of header) ---
+   Pill switch: both icons always visible, a thumb slides between them so
+   the active mode is unambiguous and the available alternative is preview. */
+.theme-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 1;
+}
+.theme-toggle-track {
+  --toggle-h: 1.7rem;
+  --toggle-w: 3.2rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: var(--toggle-w);
+  height: var(--toggle-h);
+  padding: 0 0.35rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-700);
+  box-shadow: 0 2px 6px var(--shadow-color);
+  transition: background var(--transition-fast);
+}
+.theme-toggle:hover .theme-toggle-track {
+  background: var(--surface-600);
+}
+.theme-toggle:focus-visible .theme-toggle-track {
+  outline: 2px solid var(--accent-gold);
+  outline-offset: 2px;
+}
+.theme-toggle-icon {
+  position: relative;
+  z-index: 2;
+  font-size: 0.85rem;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  transition: opacity var(--transition-fast);
+}
+/* Active icon stays bright; inactive dims so the current mode pops. */
+[data-theme='light'] .theme-toggle-icon-moon,
+[data-theme='dark'] .theme-toggle-icon-sun {
+  opacity: 0.45;
+}
+.theme-toggle-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0.18rem;
+  width: calc(var(--toggle-h) - 0.46rem);
+  height: calc(var(--toggle-h) - 0.46rem);
+  border-radius: 50%;
+  background: var(--accent-gold-light);
+  transform: translateY(-50%);
+  transition:
+    transform var(--transition-normal),
+    background var(--transition-fast);
+  z-index: 1;
+  box-shadow: 0 1px 3px var(--shadow-color-strong);
+}
+[data-theme='dark'] .theme-toggle-thumb {
+  transform: translate(calc(var(--toggle-w) - var(--toggle-h)), -50%);
+  background: var(--accent-gold);
+}
+@media (max-width: 575px) {
+  .theme-toggle {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+  .theme-toggle-track {
+    --toggle-h: 1.5rem;
+    --toggle-w: 2.9rem;
+  }
+  .theme-toggle-icon {
+    font-size: 0.75rem;
+  }
+}
+
+/* --- Footer / tip button (standalone page) --- */
+.site-footer {
+  text-align: center;
+  padding: 8px 0 14px;
+  margin-top: 16px;
+}
+.tip-btn {
+  display: inline-block;
+  background: linear-gradient(135deg, #ff813f 0%, #ff5f1f 100%);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 10px 24px;
+  border-radius: 25px;
+  text-decoration: none;
+  box-shadow: 0 4px 15px rgba(255, 95, 31, 0.4);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+.tip-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 95, 31, 0.5);
+  color: #fff;
+}
+
+/* --- Super Manager cards --- */
+/* Skip layout + paint for off-screen cards. ~8 of 100+ cards are visible at a
+   time, so this keeps first render + scrolling cheap on low-end phones. The
+   `auto` length is a placeholder so the scrollbar doesn't jump; once a card
+   scrolls into view the browser remembers its real size. */
+#smGrid .sm-card-col {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+}
+.sm-card {
+  border-radius: var(--radius-md);
+  border: 3px solid var(--border-strong);
+  background: var(--content-bg);
+  padding: 0;
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s,
+    opacity 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.sm-card:hover {
+  box-shadow: 0 4px 12px var(--shadow-color-strong);
+}
+.sm-card.rarity-legendary {
+  border-color: var(--rarity-legendary);
+}
+.sm-card.rarity-epic {
+  border-color: var(--rarity-epic);
+}
+.sm-card.rarity-rare {
+  border-color: var(--rarity-rare);
+}
+.sm-card.rarity-common {
+  border-color: var(--rarity-common);
+}
+.sm-avatar {
+  width: 100%;
+  height: 0;
+  padding-bottom: 50%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  border: none;
+}
+.sm-avatar img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.sm-avatar .sm-initials {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: #fff;
+}
+.sm-avatar.rarity-legendary {
+  background: linear-gradient(135deg, var(--rarity-legendary), var(--rarity-legendary-stop));
+}
+.sm-avatar.rarity-epic {
+  background: linear-gradient(135deg, var(--rarity-epic), var(--rarity-epic-stop));
+}
+.sm-avatar.rarity-rare {
+  background: linear-gradient(135deg, var(--rarity-rare), var(--rarity-rare-stop));
+}
+.sm-avatar.rarity-common {
+  background: linear-gradient(135deg, var(--rarity-common), var(--rarity-common-stop));
+}
+.sm-card-info {
+  padding: 4px 6px 3px;
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+  min-height: 36px;
+}
+.sm-card-info-left {
+  flex: 1;
+  min-width: 0;
+}
+.sm-card-info-right {
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 0.6rem;
+  color: var(--content-text-muted);
+  line-height: 1.3;
+}
+.sm-card-info-right .passive-locked {
+  opacity: 0.4;
+}
+.sm-name {
+  font-weight: 600;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sm-area {
+  font-size: 0.65rem;
+  color: var(--content-text-muted);
+  text-transform: capitalize;
+}
+.sm-area-badge {
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #fff;
+}
+.sm-card-controls {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+  padding: 2px 5px;
+}
+.sm-elements {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sm-el {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #fff;
+  border: 2px solid transparent;
+  overflow: hidden;
+}
+.sm-el img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sm-el.eff-se {
+  background: var(--accent-success);
+}
+.sm-el.eff-pe {
+  background: var(--accent-info);
+}
+.sm-el.eff-nve {
+  background: var(--rarity-common);
+}
+.sm-el.eff-se-locked {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+.sm-unlock-btn {
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sm-unlock-btn:hover {
+  color: #ccc;
+}
+.sm-unlock-btn.active {
+  color: var(--accent-success-bright);
+}
+.sm-star-input {
+  display: inline-flex;
+  gap: 1px;
+  cursor: pointer;
+}
+.sm-star-input span {
+  font-size: 0.7rem;
+  color: var(--border-strong);
+  transition: color 0.1s;
+  line-height: 1;
+}
+.sm-star-input span.active {
+  color: var(--accent-gold);
+}
+.sm-star-input span:hover {
+  color: var(--accent-gold-light);
+}
+.sm-edit-panel {
+  display: none;
+  padding: 8px;
+  font-size: 0.8rem;
+  border-top: 1px solid var(--border-subtle);
+}
+.sm-edit-panel.open {
+  display: block;
+}
+.sm-edit-panel label {
+  font-weight: 500;
+  margin-bottom: 2px;
+  display: block;
+  font-size: 0.75rem;
+  color: var(--content-text);
+}
+.sm-edit-panel input,
+.sm-edit-panel select {
+  font-size: 0.8rem;
+}
+.sm-passive {
+  font-size: 0.7rem;
+  color: var(--content-text-muted);
+  padding: 0 6px;
+}
+.sm-passive .passive-locked {
+  opacity: 0.4;
+}
+.sm-max-btn {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  border-radius: 3px;
+  padding: 1px 4px;
+  line-height: 1.3;
+  user-select: none;
+}
+.sm-max-btn:hover {
+  color: #ccc;
+  border-color: #ccc;
+}
+.sm-max-btn.active {
+  color: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+.sm-p30-btn {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  border-radius: 3px;
+  padding: 1px 4px;
+  line-height: 1.3;
+  user-select: none;
+}
+.sm-p30-btn:hover {
+  color: #ccc;
+  border-color: #ccc;
+}
+.sm-p30-btn.active {
+  color: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+.sm-chrono-btn {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  border-radius: 3px;
+  padding: 1px 4px;
+  line-height: 1.3;
+  user-select: none;
+}
+.sm-chrono-btn:hover {
+  color: #ccc;
+  border-color: #ccc;
+}
+.sm-chrono-btn.active {
+  color: var(--accent-danger);
+  border-color: var(--accent-danger);
+}
+.sm-tl-btn {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  border-radius: 3px;
+  padding: 1px 4px;
+  line-height: 1.3;
+  user-select: none;
+}
+.sm-tl-btn:hover {
+  color: #ccc;
+  border-color: #ccc;
+}
+.sm-tl-btn.active {
+  color: var(--accent-danger);
+  border-color: var(--accent-danger);
+}
+/* Locked state */
+.sm-card.locked .sm-avatar {
+  filter: grayscale(0.85);
+  opacity: 0.6;
+}
+.sm-lock-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+  color: var(--accent-gold);
+  z-index: 1;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+/* Fragment bar */
+.sm-fragment-bar {
+  height: 16px;
+  background: var(--content-bg-alt);
+  position: relative;
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+  overflow: hidden;
+}
+.sm-fragment-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  transition: width 0.3s;
+}
+.sm-card.rarity-legendary .sm-fragment-fill {
+  background: linear-gradient(90deg, var(--rarity-legendary), var(--rarity-legendary-stop));
+}
+.sm-card.rarity-epic .sm-fragment-fill {
+  background: linear-gradient(90deg, var(--rarity-epic), var(--rarity-epic-stop));
+}
+.sm-card.rarity-rare .sm-fragment-fill {
+  background: linear-gradient(90deg, var(--rarity-rare), var(--rarity-rare-stop));
+}
+.sm-card.rarity-common .sm-fragment-fill {
+  background: linear-gradient(90deg, var(--rarity-common), var(--rarity-common-stop));
+}
+.sm-fragment-text {
+  position: relative;
+  z-index: 1;
+  color: var(--content-text);
+}
+.el-flame {
+  --el-color: var(--el-flame);
+}
+.el-frost {
+  --el-color: var(--el-frost);
+}
+.el-nature {
+  --el-color: var(--el-nature);
+}
+.el-wind {
+  --el-color: var(--el-wind);
+}
+.el-water {
+  --el-color: var(--el-water);
+}
+.el-dark {
+  --el-color: var(--el-dark);
+}
+.el-light {
+  --el-color: var(--el-light);
+}
+.el-sand {
+  --el-color: var(--el-sand);
+}
+.el-order {
+  --el-color: var(--el-order);
+}
+.el-chaos {
+  --el-color: var(--el-chaos);
+}

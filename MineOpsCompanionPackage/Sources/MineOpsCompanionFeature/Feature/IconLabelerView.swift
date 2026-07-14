@@ -37,11 +37,6 @@ struct IconLabelerView: View {
                             .foregroundStyle(.white.opacity(0.7))
                         
                         HStack(spacing: 12) {
-                            Button("Auto-Identify") {
-                                autoIdentifyIcons()
-                            }
-                            .buttonStyle(.bordered)
-                            
                             Button("Export Templates") {
                                 exportTemplates()
                             }
@@ -431,48 +426,6 @@ struct IconLabelerView: View {
             return true
         } catch {
             return false
-        }
-    }
-    
-    private func autoIdentifyIcons() {
-        Task { @MainActor in
-            // Load templates
-            let templates = IconTemplateMatcher.loadTemplates()
-            guard !templates.isEmpty else {
-                errorMessage = "No templates found. Label some icons and export first."
-                return
-            }
-            
-            var identified = 0
-            let unlabeled = harvestEntries.filter { !labels.keys.contains($0.filename) }
-            
-            for entry in unlabeled {
-                guard let iconImage = loadImage(filename: entry.filename) else { continue }
-                
-                // Try to match against templates
-                if let match = IconTemplateMatcher.findBestMatch(for: iconImage, in: templates) {
-                    let label = IconLabel(
-                        file: entry.filename,
-                        category: .passive,
-                        type: match.type,
-                        unlocked: entry.isUnlocked
-                    )
-                    labels[entry.filename] = label
-                    identified += 1
-                    print("🔍 Auto-identified \(entry.filename) as \(match.type) (similarity: \(String(format: "%.2f", match.similarity)))")
-                }
-            }
-            
-            // Save updated labels
-            if identified > 0 {
-                _ = saveLabelsToFile()
-                loadHarvest() // Refresh unlabeled list
-                errorMessage = "✅ Auto-identified \(identified) icon\(identified == 1 ? "" : "s")"
-            } else {
-                errorMessage = "No new matches found"
-            }
-            
-            print("✅ Auto-identified \(identified) icons")
         }
     }
     

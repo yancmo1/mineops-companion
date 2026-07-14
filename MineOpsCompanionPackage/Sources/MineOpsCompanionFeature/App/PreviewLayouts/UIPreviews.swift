@@ -26,12 +26,10 @@ struct MineOpsUIPreviews: View {
 
 #Preview("Dashboard Tabs") {
     MineOpsUIPreviews()
-        .environmentObject(OCRReviewViewModel())
         .preferredColorScheme(.dark)
 }
 
 #Preview("Command V2") {
     CommandCenterViewV2()
-        .environmentObject(OCRReviewViewModel())
         .preferredColorScheme(.dark)
 }

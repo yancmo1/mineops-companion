@@ -1,0 +1,446 @@
+/* SM Comparison tab — Mineshaft instant-cash actives per second */
+
+.sm-comp-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md, 1rem);
+}
+
+.sm-comp-intro h5 {
+  font-family: var(--font-display, serif);
+  letter-spacing: 0.02em;
+}
+
+.sm-comp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm, 0.5rem);
+  align-items: center;
+}
+
+.sm-comp-controls select {
+  min-width: 10em;
+}
+
+.sm-comp-elements select {
+  min-width: 7em;
+}
+
+.sm-comp-chart-wrap {
+  position: relative;
+  height: 340px;
+  background: var(--content-bg, #faf8f5);
+  border: 1px solid var(--content-bg-alt, #f2efe9);
+  border-radius: var(--radius-md, 12px);
+  padding: var(--space-md, 1rem);
+}
+
+.sm-comp-chart-wrap canvas {
+  max-height: 100%;
+}
+
+.sm-comp-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md, 1rem);
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.sm-comp-table-wrap {
+  overflow-x: auto;
+}
+
+.sm-comp-delta {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--content-text-muted, #6b6259);
+  white-space: nowrap;
+  margin-left: 0.15em;
+}
+
+.sm-comp-best-per-element {
+  margin-top: var(--space-md, 1rem);
+}
+
+.sm-comp-bpe-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.sm-comp-bpe-help {
+  font-weight: 400;
+  font-size: 0.75rem;
+}
+
+.sm-comp-bpe-table {
+  font-size: 0.85rem;
+  margin-bottom: 0;
+  max-width: 32rem;
+}
+
+.sm-comp-bpe-table th,
+.sm-comp-bpe-table td {
+  padding: 0.25rem 0.5rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-subtle, #e5e7eb);
+}
+
+.sm-comp-bpe-elem {
+  width: 5em;
+}
+
+.sm-comp-bpe-elem-btn {
+  font-weight: 600;
+  text-transform: capitalize;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-link, #1971c2);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.sm-comp-bpe-elem-btn:hover,
+.sm-comp-bpe-elem-btn:focus-visible {
+  text-decoration-style: solid;
+  outline: none;
+}
+
+.sm-comp-bpe-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+}
+
+.sm-comp-bpe-sprite-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 22px;
+  height: 22px;
+  overflow: hidden;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.sm-comp-bpe-sprite {
+  display: block;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 3px;
+  transform-origin: top left;
+}
+
+.sm-comp-bpe-suffix {
+  font-size: 0.7rem;
+  color: var(--content-text-muted, #6b6259);
+  margin-left: 0.25em;
+}
+
+.sm-comp-table {
+  font-size: 0.85rem;
+  margin-bottom: 0;
+}
+
+.sm-comp-table thead th {
+  white-space: nowrap;
+}
+
+.sm-comp-row.excluded {
+  opacity: 0.45;
+}
+
+.sm-comp-row.excluded td strong {
+  font-weight: 500;
+}
+
+.sm-comp-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-width: 10em;
+}
+
+.sm-comp-name-stacked {
+  display: table-cell;
+  vertical-align: middle;
+  min-width: 14em;
+}
+
+.sm-comp-sprite {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.sm-comp-eff {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 6px);
+  letter-spacing: 0.04em;
+}
+
+.sm-comp-eff-SE {
+  background: rgba(47, 158, 68, 0.15);
+  color: var(--accent-success, #2f9e44);
+}
+
+.sm-comp-eff-PE {
+  background: rgba(245, 166, 35, 0.15);
+  color: var(--accent-warning, #f5a623);
+}
+
+.sm-comp-eff-NVE {
+  background: rgba(192, 57, 43, 0.15);
+  color: var(--accent-danger, #c0392b);
+}
+
+.sm-comp-sub {
+  display: inline-block;
+  font-size: 0.7rem;
+  color: var(--content-text-muted, #6b6259);
+  white-space: nowrap;
+}
+
+.sm-comp-shaft-count {
+  display: inline-block;
+  width: 4.5em;
+  padding: 0 0.35em;
+  margin: 0 0.15em;
+  height: 1.5em;
+  font-size: 0.7rem;
+  vertical-align: baseline;
+}
+
+.sm-comp-cap {
+  color: var(--accent-warning, #f5a623);
+  font-weight: 600;
+}
+
+.sm-comp-hint {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.sm-comp-boost {
+  white-space: nowrap;
+}
+
+.sm-comp-boost-summary {
+  font-size: 0.78rem;
+  color: var(--content-text-muted, #6b6259);
+}
+
+.sm-comp-boost-badge {
+  display: inline-block;
+  margin-left: 0.4em;
+  padding: 1px 5px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 6px);
+  letter-spacing: 0.02em;
+}
+
+.sm-comp-boost-axiom {
+  background: rgba(41, 128, 185, 0.15);
+  color: var(--accent-info, #2980b9);
+}
+
+.sm-comp-boost-vulcan {
+  background: rgba(231, 76, 60, 0.15);
+  color: var(--accent-danger, #c0392b);
+}
+
+.sm-comp-info {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+/* Per-row level/rank override inputs — small inline number boxes that read
+   from tracker by default, become "owned" by the comparison once edited. */
+.sm-comp-lvrank {
+  white-space: nowrap;
+}
+
+.sm-comp-level-override,
+.sm-comp-rank-override {
+  display: inline-block;
+  width: 3.5em;
+  padding: 0 0.3em;
+  margin: 0 0.15em;
+  height: 1.5em;
+  font-size: 0.78rem;
+  vertical-align: baseline;
+}
+
+.sm-comp-reset-override {
+  background: none;
+  border: none;
+  color: var(--content-text-muted, #6b6259);
+  cursor: pointer;
+  padding: 0 0.2em;
+  margin-left: 0.2em;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.sm-comp-reset-override:hover {
+  color: var(--accent-info, #2980b9);
+}
+
+/* "+ Maxed copy" / "✕ remove" buttons — small inline links inside the name
+   cell. Subtle by default, brighten on hover. */
+.sm-comp-add-maxed,
+.sm-comp-remove-maxed {
+  font-size: 0.72rem;
+  text-decoration: none;
+  margin-left: 0.4em;
+  white-space: nowrap;
+}
+
+.sm-comp-add-maxed {
+  color: var(--accent-info, #2980b9);
+}
+
+.sm-comp-remove-maxed {
+  color: var(--accent-danger, #c0392b);
+}
+
+/* Maxed-copy row treatment: dashed left border + a small gold MAXED badge.
+   Bars in the chart get a translucent rarity color (see smCompFadeColor in
+   sm-comparison.js) so the visual cue is consistent across both views. */
+.sm-comp-row.maxed-copy > td:first-child {
+  border-left: 3px dashed var(--accent-warning, #f5a623);
+}
+
+.sm-comp-maxed-badge {
+  display: inline-block;
+  margin-left: 0.4em;
+  padding: 1px 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent-warning, #f5a623);
+  border-radius: var(--radius-sm, 6px);
+  letter-spacing: 0.06em;
+  vertical-align: middle;
+}
+
+/* Picker dropdown sits at the end of the controls row. Dropdown menu can
+   grow tall when many SMs are unmaxed — cap it and let it scroll. */
+.sm-comp-add-maxed-menu {
+  max-height: 18rem;
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+
+.sm-comp-pick-maxed {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+@media (max-width: 640px) {
+  .sm-comp-chart-wrap {
+    height: 280px;
+    padding: var(--space-sm, 0.5rem);
+  }
+  .sm-comp-table {
+    font-size: 0.78rem;
+  }
+  .sm-comp-sprite {
+    width: 22px;
+    height: 22px;
+  }
+  .sm-comp-level-override,
+  .sm-comp-rank-override {
+    width: 3em;
+    font-size: 0.72rem;
+  }
+}
+
+/* ===== Mode pills ===== */
+.sm-comp-mode-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--content-bg-alt, #f2efe9);
+}
+
+.sm-comp-mode-pill {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  line-height: 1.15;
+  border: 1px solid var(--content-bg-alt, #d9d4ca);
+  background: var(--content-bg, #faf8f5);
+  color: inherit;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.sm-comp-mode-pill:hover,
+.sm-comp-mode-pill:focus-visible {
+  background: var(--content-bg-alt, #efe9de);
+  outline: none;
+}
+
+.sm-comp-mode-pill.active {
+  background: #2f5cff;
+  border-color: #2f5cff;
+  color: #fff;
+}
+
+.sm-comp-mode-pill-label {
+  font-weight: 600;
+}
+
+.sm-comp-mode-pill-sub {
+  font-size: 0.65rem;
+  opacity: 0.85;
+  font-weight: 400;
+}
+
+.sm-comp-mode-help {
+  margin-top: -0.25rem;
+}
+
+/* ===== Per-mode lighter table cell variants ===== */
+.sm-comp-name-line {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sm-comp-desc {
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  color: var(--text-muted, #888);
+}

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kolibri API Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary {
+            background-color: #007AFF;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #0051D5;
+        }
+        .btn-secondary {
+            background-color: #E5E5EA;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background-color: #D1D1D6;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .status.loading {
+            background-color: #FFF3CD;
+            border: 1px solid #FFE69C;
+            color: #856404;
+        }
+        .status.success {
+            background-color: #D4EDDA;
+            border: 1px solid #C3E6CB;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #F8D7DA;
+            border: 1px solid #F5C6CB;
+            color: #721C24;
+        }
+        .response-container {
+            margin-top: 20px;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #e9ecef;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .info {
+            background: #E3F2FD;
+            border: 1px solid #90CAF9;
+            color: #1565C0;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .polling-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .polling-controls input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .polling-status {
+            font-size: 13px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Kolibri API Test - Idle Miner Tycoon</h1>
+        
+        <div class="info">
+            <strong>Note:</strong> This page tests the Kolibri API endpoint for fetching savegame data. 
+            Due to CORS restrictions, you may need to run this through a proxy or use browser extensions.
+        </div>
+
+        <div class="input-group">
+            <label for="kolibriId">Kolibri ID:</label>
+            <input type="text" id="kolibriId" placeholder="Enter your Kolibri ID" value="">
+        </div>
+
+        <div class="input-group">
+            <label for="authToken">Authorization Token:</label>
+            <input type="text" id="authToken" placeholder="M8XMbdJKrSZMZL2nxd2vH2tFWE6m7LaJwY7hNsTQavtZ65Xe8AztsR==" 
+                   value="M8XMbdJKrSZMZL2nxd2vH2tFWE6m7LaJwY7hNsTQavtZ65Xe8AztsR==">
+        </div>
+
+        <div class="input-group">
+            <label for="saveGameKey">Save Game Key:</label>
+            <input type="text" id="saveGameKey" placeholder="0" value="0">
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="fetchData()">Fetch Savegame Data</button>
+            <button class="btn-secondary" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div class="polling-controls">
+            <button class="btn-secondary" id="pollButton" onclick="togglePolling()">Start Auto-Polling</button>
+            <label>Interval (seconds):</label>
+            <input type="number" id="pollInterval" value="5" min="1" max="60">
+            <span class="polling-status" id="pollStatus"></span>
+        </div>
+
+        <div id="statusContainer"></div>
+        <div id="responseContainer" class="response-container"></div>
+    </div>
+
+    <script>
+        let pollingInterval = null;
+        let requestCount = 0;
+
+        function showStatus(message, type) {
+            const container = document.getElementById('statusContainer');
+            container.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function clearResults() {
+            document.getElementById('statusContainer').innerHTML = '';
+            document.getElementById('responseContainer').innerHTML = '';
+            requestCount = 0;
+            updatePollStatus();
+        }
+
+        function updatePollStatus() {
+            const status = document.getElementById('pollStatus');
+            if (pollingInterval) {
+                status.textContent = `Polling active (${requestCount} requests)`;
+            } else {
+                status.textContent = requestCount > 0 ? `${requestCount} requests completed` : '';
+            }
+        }
+
+        function togglePolling() {
+            const button = document.getElementById('pollButton');
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+                button.textContent = 'Start Auto-Polling';
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-secondary');
+            } else {
+                const interval = parseInt(document.getElementById('pollInterval').value) * 1000;
+                pollingInterval = setInterval(fetchData, interval);
+                button.textContent = 'Stop Auto-Polling';
+                button.classList.remove('btn-secondary');
+                button.classList.add('btn-primary');
+                fetchData(); // Immediate first fetch
+            }
+            updatePollStatus();
+        }
+
+        async function fetchData() {
+            const kolibriId = document.getElementById('kolibriId').value.trim();
+            const authToken = document.getElementById('authToken').value.trim();
+            const saveGameKey = document.getElementById('saveGameKey').value.trim();
+
+            if (!kolibriId) {
+                showStatus('❌ Please enter a Kolibri ID', 'error');
+                return;
+            }
+
+            if (!authToken) {
+                showStatus('❌ Please enter an authorization token', 'error');
+                return;
+            }
+
+            const url = `https://capsule.kolibrigames.com/api/client/v1/games/com.fluffyfairygames.idleminertycoon/players/${kolibriId}/savegame?saveGameKey=${saveGameKey}`;
+            
+            showStatus('⏳ Fetching data...', 'loading');
+            requestCount++;
+            updatePollStatus();
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                showStatus(`✅ Data fetched successfully! (${new Date().toLocaleTimeString()})`, 'success');
+                
+                const responseContainer = document.getElementById('responseContainer');
+                responseContainer.innerHTML = `
+                    <h3>Response Data:</h3>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                    
+                    <h3>Request Details:</h3>
+                    <pre>URL: ${url}
+Authorization: ${authToken}
+Response Status: ${response.status} ${response.statusText}
+Response Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+                
+                const responseContainer = document.getElementById('responseContainer');
+                responseContainer.innerHTML = `
+                    <h3>Error Details:</h3>
+                    <pre>${error.stack || error.message}</pre>
+                    
+                    <h3>Common Issues:</h3>
+                    <ul>
+                        <li><strong>CORS Error:</strong> The API may not allow browser requests. Try using a proxy or the iOS app.</li>
+                        <li><strong>Invalid Token:</strong> Check that your authorization token is correct.</li>
+                        <li><strong>Invalid Kolibri ID:</strong> Verify your player ID is correct.</li>
+                        <li><strong>Network Error:</strong> Check your internet connection.</li>
+                    </ul>
+                    
+                    <h3>Suggested Workarounds:</h3>
+                    <ul>
+                        <li>Use a CORS proxy like <code>https://corsproxy.io/?${encodeURIComponent(url)}</code></li>
+                        <li>Use a browser extension like "CORS Unblock"</li>
+                        <li>Test directly from the iOS app (recommended)</li>
+                    </ul>
+                `;
+            }
+        }
+
+        // Stop polling when page is closed
+        window.addEventListener('beforeunload', () => {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+        });
+    </script>
+</body>
+</html>

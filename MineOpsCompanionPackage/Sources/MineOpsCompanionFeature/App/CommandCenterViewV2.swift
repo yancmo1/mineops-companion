@@ -1,9 +1,6 @@
 import SwiftUI
 
 struct CommandCenterViewV2: View {
-    @EnvironmentObject private var review: OCRReviewViewModel
-
-    @State private var navigateToImport = false
     @State private var navigateToStrategy = false
     @State private var showingSettings = false
 
@@ -11,7 +8,6 @@ struct CommandCenterViewV2: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: MineOpsLayout.sectionSpacing) {
-                    ocrSection
                     summarySection
                     strategySection
                     quickStats
@@ -37,38 +33,13 @@ struct CommandCenterViewV2: View {
                         .font(.headline)
                         .foregroundStyle(Color.accentCyan)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { navigateToImport = true }) {
-                        Image(systemName: "photo.on.rectangle")
-                    }
-                    .accessibilityLabel("Open OCR import")
-                }
             }
             .tint(.accentCyan)
-            .navigationDestination(isPresented: $navigateToImport) {
-                OCRReviewView()
-            }
             .navigationDestination(isPresented: $navigateToStrategy) {
                 StrategyPipelineView()
             }
             .sheet(isPresented: $showingSettings) {
                 MineOpsSettingsView()
-            }
-        }
-    }
-
-    private var ocrSection: some View {
-        CardContainer(title: "OCR Import") {
-            VStack(spacing: 16) {
-                Text("Recognized \(recognizedCount) super managers across \(coveredDepartments) department(s).")
-                    .mineOpsBody()
-                MineOpsButton(label: "Import Screenshots", icon: "photo.on.rectangle") {
-                    navigateToImport = true
-                }
-                ProgressView(value: importProgressValue)
-                    .tint(.accentCyan)
-                Text("Coverage \(Int(importProgressValue * 100))% of departments")
-                    .mineOpsCaption()
             }
         }
     }
@@ -122,16 +93,14 @@ struct CommandCenterViewV2: View {
 
     private var quickStats: some View {
         HStack(spacing: 12) {
-            QuickStat(title: "Recognized", value: "\(recognizedCount)", color: .accentCyan)
+            QuickStat(title: "Total SMs", value: "\(recognizedCount)", color: .accentCyan)
             QuickStat(title: "Depts Covered", value: "\(coveredDepartments)/3", color: .accentOrange)
-            QuickStat(title: "Needs Review", value: "\(needsReviewCount)", color: .pink)
         }
     }
 }
 
 #Preview("Command Center V2") {
     CommandCenterViewV2()
-        .environmentObject(OCRReviewViewModel())
         .preferredColorScheme(.dark)
 }
 
@@ -142,15 +111,9 @@ private extension CommandCenterViewV2 {
         let color: Color
     }
 
-    var recognizedCount: Int { review.recognized.count }
+    var recognizedCount: Int { 0 }
 
-    var coveredDepartments: Int {
-        Set(review.recognized.compactMap { canonicalDepartment(for: $0) }).count
-    }
-
-    var needsReviewCount: Int {
-        review.recognized.filter { !$0.stats.hasAnyStats }.count
-    }
+    var coveredDepartments: Int { 0 }
 
     var departmentSummaries: [DepartmentSummary] {
         let mappings: [(label: String, key: String, color: Color)] = [
@@ -160,83 +123,19 @@ private extension CommandCenterViewV2 {
         ]
 
         return mappings.map { item in
-            let entries = review.recognized.filter { canonicalDepartment(for: $0) == item.key }
-            let multipliers = entries.map { $0.primaryBoostScore }.filter { $0 > 0 }
-            let averageMultiplier = multipliers.isEmpty ? 1 : multipliers.reduce(0, +) / Double(multipliers.count)
-            let percent = max((averageMultiplier - 1) * 100, 0)
-            return DepartmentSummary(label: item.label, percent: percent, color: item.color)
+            DepartmentSummary(label: item.label, percent: 0, color: item.color)
         }
     }
 
-    var averageBoostPercent: Double {
-        let percents: [Double] = review.recognized.compactMap { sm in
-            if let value = sm.active.multiplier {
-                return (value - 1) * 100
-            }
-            if let value = sm.stats.percentNumberValues.first {
-                return value
-            }
-            if let multiplier = sm.stats.multipliersDescending.first?.value {
-                return (multiplier - 1) * 100
-            }
-            if let multiplier = sm.directoryMatch?.active?.multiplier {
-                return (multiplier - 1) * 100
-            }
-            return nil
-        }
-        guard !percents.isEmpty else { return 0 }
-        let total = percents.reduce(0, +)
-        return total / Double(percents.count)
-    }
+    var averageBoostPercent: Double { 0 }
 
-    var averageBoostDisplay: String {
-        averageBoostPercent <= 0 ? "—" : "\(Int(averageBoostPercent.rounded()))%"
-    }
+    var averageBoostDisplay: String { "—" }
 
-    var averageBoostProgress: Double {
-        guard averageBoostPercent > 0 else { return 0 }
-        return min(averageBoostPercent / 1000, 1)
-    }
+    var averageBoostProgress: Double { 0 }
 
-    var nextDueMinutes: Int? {
-        review.recognized
-            .compactMap {
-                if let seconds = $0.active.durationSeconds { return seconds / 60 }
-                return $0.stats.minuteDurations.min()
-            }
-            .min()
-    }
+    var nextDueMinutes: Int? { nil }
 
-    var nextDueDisplay: String {
-        guard let minutes = nextDueMinutes else { return "—" }
-        if minutes >= 60 {
-            let hours = Double(minutes) / 60
-            return String(format: "%.1fh", hours)
-        } else {
-            return "\(minutes)m"
-        }
-    }
+    var nextDueDisplay: String { "—" }
 
-    var nextDueProgress: Double {
-        guard let minutes = nextDueMinutes else { return 0 }
-        return min(Double(minutes) / 180, 1)
-    }
-
-    var importProgressValue: Double {
-        guard coveredDepartments > 0 else { return 0 }
-        return min(Double(coveredDepartments) / 3, 1)
-    }
-
-    func canonicalDepartment(for sm: RecognizedSM) -> String? {
-        if let role = sm.role?.lowercased() {
-            switch role {
-            case "mine", "mineshaft": return "mineshaft"
-            case "elevator": return "elevator"
-            case "warehouse": return "warehouse"
-            case "transport": return "elevator"
-            default: break
-            }
-        }
-        return sm.directoryMatch?.department
-    }
+    var nextDueProgress: Double { 0 }
 }

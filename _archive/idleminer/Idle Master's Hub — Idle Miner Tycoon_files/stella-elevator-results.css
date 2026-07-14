@@ -1,0 +1,279 @@
+/* Stella's Lucky Elevator — bomb-decision, result, and rewards styles.
+   Continues the .stella-* namespace and CSS variables from stella-elevator.css. */
+
+/* ---------- Bomb decision options ---------- */
+
+.stella-bomb-summary {
+  margin: 0.6rem 0 0.8rem;
+  font-size: 0.95rem;
+  color: var(--stella-subheading);
+}
+
+.stella-bomb-banner {
+  margin: 0.4rem 0 0.6rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--stella-border);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--stella-subheading);
+  background: var(--stella-neutral-bg);
+}
+
+.stella-bomb-banner-info {
+  background: var(--stella-info-bg);
+  border-color: var(--stella-info-border);
+  color: var(--stella-info-text);
+}
+
+.stella-bomb-banner-state.stella-bomb-banner-good,
+.stella-bomb-banner-state.stella-bomb-banner-mild-good {
+  background: var(--stella-success-bg);
+  border-color: var(--stella-success-border);
+  color: var(--stella-success-text);
+}
+
+.stella-bomb-banner-state.stella-bomb-banner-bad,
+.stella-bomb-banner-state.stella-bomb-banner-mild-bad {
+  background: var(--stella-danger-bg);
+  border-color: var(--stella-danger-border);
+  color: var(--stella-danger-text);
+}
+
+.stella-bomb-banner-state.stella-bomb-banner-neutral {
+  background: var(--stella-neutral-bg);
+  border-color: var(--stella-neutral-border);
+  color: var(--stella-neutral-text);
+}
+
+.stella-bomb-median {
+  margin-top: 0.3rem;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--stella-text-muted);
+}
+
+.stella-bomb-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.8rem;
+}
+
+.stella-bomb-option {
+  padding: 0.85rem 1rem;
+  background: var(--stella-surface-raised);
+  border: 1px solid var(--stella-border);
+  border-radius: 12px;
+}
+
+.stella-bomb-option-best {
+  background: linear-gradient(
+    180deg,
+    var(--stella-success-bg) 0%,
+    var(--stella-surface-raised) 70%
+  );
+  border-color: var(--stella-success-border);
+  box-shadow: 0 4px 14px rgba(47, 158, 68, 0.1);
+}
+
+.stella-bomb-option-disabled {
+  opacity: 0.55;
+}
+
+.stella-bomb-option-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.stella-bomb-option-name {
+  color: var(--stella-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.stella-bomb-option-best-tag {
+  padding: 0.15rem 0.55rem;
+  background: #d3edd7;
+  color: #1e5031;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+}
+
+.stella-bomb-detail {
+  color: var(--stella-soft-text);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.stella-bomb-prob {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  color: var(--stella-text);
+  font-family: 'Orbitron', monospace;
+  font-size: 1.4rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.stella-bomb-prob-sub {
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--stella-text-muted);
+  letter-spacing: 0;
+}
+
+.stella-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.stella-result-box {
+  padding: 0.85rem 1rem;
+  background: var(--stella-result-bg);
+  border: 1px solid var(--stella-result-border);
+  border-radius: 12px;
+}
+
+.stella-result-label {
+  color: var(--stella-result-label);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.stella-result-value {
+  margin-top: 0.15rem;
+  color: var(--stella-text);
+  font-family: 'Orbitron', monospace;
+  font-size: 1.55rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.stella-result-sub {
+  margin-top: 0.25rem;
+  color: var(--stella-text-muted);
+  font-size: 0.8rem;
+}
+
+.stella-result-floors {
+  color: var(--stella-soft-text);
+  font-size: 0.88rem;
+  word-break: break-word;
+}
+
+.stella-result-note {
+  color: var(--stella-text-muted);
+  font-size: 0.82rem;
+}
+
+/* ---------- Rewards ---------- */
+
+.stella-rewards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 0.85rem;
+}
+
+.stella-tier {
+  padding: 0.75rem 0.9rem 0.9rem;
+  background: var(--stella-surface-raised);
+  border: 1px solid var(--stella-border);
+  border-radius: 14px;
+  box-shadow: 0 3px 10px var(--stella-shadow-soft);
+}
+
+.stella-tier-safe {
+  background: linear-gradient(180deg, var(--stella-safe-bg) 0%, var(--stella-surface-raised) 70%);
+  border-color: var(--stella-safe-border);
+}
+
+.stella-tier-risk {
+  background: linear-gradient(180deg, var(--stella-risk-bg) 0%, var(--stella-surface-raised) 70%);
+  border-color: var(--stella-risk-border);
+}
+
+.stella-tier-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.stella-tier-label {
+  color: var(--stella-heading);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.stella-tier-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stella-safe-list {
+  padding-left: 1.1rem;
+  color: var(--stella-safe-text);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.stella-risk-table {
+  --bs-border-color: var(--stella-border);
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--stella-text);
+  font-size: 0.85rem;
+}
+
+.stella-risk-table thead th {
+  background: var(--stella-risk-head-bg);
+  color: var(--stella-risk-text);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stella-set-letter {
+  width: 34px;
+  color: var(--stella-risk-text);
+  font-weight: 800;
+  text-align: center;
+  background: var(--stella-set-bg);
+}
+
+.stella-bomb-cell {
+  color: var(--stella-bomb-text);
+  font-weight: 700;
+  background: var(--stella-bomb-bg);
+  white-space: nowrap;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 640px) {
+  .stella-calc-form {
+    grid-template-columns: 1fr;
+  }
+  .stella-title {
+    font-size: 1.3rem;
+  }
+  .stella-result-value {
+    font-size: 1.3rem;
+  }
+}

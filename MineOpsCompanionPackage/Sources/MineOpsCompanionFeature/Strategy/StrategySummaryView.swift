@@ -2,7 +2,6 @@ import SwiftUI
 import UIKit
 
 struct StrategySummaryView: View {
-    @EnvironmentObject private var review: OCRReviewViewModel
 
     @State private var strategyText: String = "No data yet."
     @State private var burstSteps: [StrategyEngine.BurstStep] = []
@@ -10,14 +9,6 @@ struct StrategySummaryView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: MineOpsLayout.sectionSpacing) {
-                if review.recognized.isEmpty {
-                    CardContainer {
-                        Text("Import manager cards first to generate a plan.")
-                            .mineOpsBody()
-                            .foregroundStyle(.white.opacity(0.7))
-                    }
-                }
-
                 CardContainer(title: "Strategy Summary") {
                     Text(strategyText)
                         .mineOpsBody()
@@ -49,9 +40,8 @@ struct StrategySummaryView: View {
                 }
 
                 MineOpsButton(label: "Generate Strategy", icon: "wand.and.stars") {
-                    generate(from: review.recognized)
+                    generate(from: [])
                 }
-                .disabled(!canGenerate(from: review.recognized))
                 .accessibilityIdentifier("generateStrategyButton")
             }
             .padding(MineOpsLayout.cardPadding)
@@ -71,18 +61,12 @@ struct StrategySummaryView: View {
                     .foregroundStyle(Color.accentCyan)
             }
             ToolbarItem(placement: .topBarTrailing) {
-                Button(action: { generate(from: review.recognized) }) {
+                    Button(action: { generate(from: []) }) {
                     Image(systemName: "arrow.triangle.2.circlepath")
                 }
-                .disabled(!canGenerate(from: review.recognized))
                 .accessibilityLabel("Regenerate strategy")
             }
         }
-    }
-
-    private func canGenerate(from recognized: [RecognizedSM]) -> Bool {
-        let depts = Set(recognized.compactMap { $0.directoryMatch?.department })
-        return depts.contains("mineshaft") && depts.contains("elevator") && depts.contains("warehouse")
     }
 
     private func generate(from recognized: [RecognizedSM]) {

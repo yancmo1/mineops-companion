@@ -16,12 +16,6 @@ public enum AppDataResetter {
         // Import snapshots
         SnapshotManager.shared.clearAll()
 
-        // Duplicate detection hashes
-        ImageHashStore.shared.clearAll()
-
-        // Screenshot processing history (so screenshots can be re-imported)
-        ScreenshotsFetcher.shared.resetImportTracking()
-
         // Strategy cache/history (Core Data)
         clearCoreDataEntity(named: "CachedStrategy")
 

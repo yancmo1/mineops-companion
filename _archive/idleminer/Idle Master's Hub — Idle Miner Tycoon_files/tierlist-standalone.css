@@ -1,0 +1,372 @@
+/* --- Tier List --- */
+.tierlist-row {
+  display: flex;
+  align-items: stretch;
+  margin-bottom: 2px;
+}
+.tierlist-label {
+  width: 60px;
+  min-width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--content-text);
+  border-radius: 4px 0 0 4px;
+  user-select: none;
+}
+.tierlist-items {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px;
+  min-height: 56px;
+  background: var(--border-subtle);
+  border-radius: 0 4px 4px 0;
+  border: 1px solid var(--border-strong);
+  border-left: none;
+  transition: background 0.15s;
+}
+.tierlist-items.dragover {
+  background: rgba(74, 124, 89, 0.18);
+}
+.tierlist-pool-header {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--content-text);
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+.tierlist-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  min-height: 56px;
+  background: var(--border-subtle);
+  border-radius: 6px;
+  border: 1px dashed var(--border-strong);
+  transition: background 0.15s;
+}
+.tierlist-pool.dragover {
+  background: rgba(74, 124, 89, 0.18);
+}
+.tierlist-item {
+  width: 68px;
+  height: 68px;
+  border: 3px solid var(--rarity-common);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: grab;
+  transition:
+    transform 0.1s,
+    opacity 0.15s;
+  background: var(--content-bg-alt) no-repeat center center;
+  background-size: cover;
+  flex-shrink: 0;
+  /* Fixed 68x68 → exact intrinsic size, so the ~100-item pool skips off-screen
+     layout/paint with zero scroll jump. */
+  content-visibility: auto;
+  contain-intrinsic-size: 68px 68px;
+}
+.tierlist-item:hover {
+  transform: scale(1.1);
+  z-index: 1;
+}
+.tierlist-item.dragging {
+  opacity: 0.3;
+}
+.tierlist-ghost {
+  border-radius: 6px;
+  box-shadow: 0 4px 12px var(--shadow-color-strong);
+}
+
+.tierlist-plusminus .tierlist-label {
+  font-size: 1.1rem;
+}
+.tierlist-plusminus .tierlist-items {
+  min-height: 44px;
+  padding: 4px;
+  gap: 3px;
+}
+.tierlist-plusminus .tierlist-item {
+  width: 52px;
+  height: 52px;
+  border-width: 2px;
+}
+.tierlist-plusminus .tierlist-row {
+  margin-bottom: 1px;
+}
+
+@media (max-width: 767.98px) {
+  .site-title {
+    font-size: 2rem;
+    letter-spacing: 1.2px;
+    padding-top: 1rem;
+  }
+
+  .site-title .correction .handwritten {
+    font-size: 1.7rem;
+    top: -1.35em;
+  }
+
+  .site-subtitle {
+    font-size: 0.78rem;
+    letter-spacing: 1.1px;
+  }
+
+  .sm-chrono-standalone .nav-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+  }
+
+  .sm-chrono-standalone .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sm-chrono-standalone .nav-tabs .nav-link {
+    white-space: nowrap;
+  }
+
+  .sm-chrono-standalone .tab-content {
+    padding: 14px;
+    border-radius: 0 8px 8px 8px;
+  }
+
+  #chronoplanner > .d-flex.flex-wrap.gap-2.align-items-center.mb-3,
+  #tierlist > .d-flex.flex-wrap.gap-2.mb-3.align-items-center,
+  #tierlist > .d-flex.flex-wrap.gap-2.align-items-center.mt-3.mb-1 {
+    align-items: stretch !important;
+  }
+
+  #chronoplanner > .d-flex.flex-wrap.gap-2.align-items-center.mb-3 > label {
+    flex: 1 1 100%;
+    margin: 0 !important;
+  }
+
+  #chronoplanner > .d-flex.flex-wrap.gap-2.align-items-center.mb-3 > button {
+    flex: 1 1 calc(50% - 0.5rem);
+  }
+
+  #chronoPatternLen {
+    width: 4.5rem !important;
+    flex: 0 0 auto;
+  }
+
+  #chronoPatternSelects {
+    flex: 1 1 100%;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 4px;
+    padding-bottom: 0;
+  }
+
+  #chronoPatternSelects .chrono-el-select {
+    flex: 0 0 auto;
+    width: 88px;
+  }
+
+  #chronoSummary {
+    flex: 1 1 100%;
+    line-height: 1.5;
+  }
+
+  #chronoplanner .row {
+    --bs-gutter-y: 0.75rem;
+  }
+
+  .chrono-grid-wrap {
+    position: static;
+    max-height: 50vh;
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    background: var(--content-bg);
+  }
+
+  .chrono-slot {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .chrono-slot-label {
+    width: 34px;
+    font-size: 0.75rem;
+  }
+
+  .chrono-el-select {
+    width: 72px;
+    font-size: 0.72rem;
+  }
+
+  .chrono-sm-badge {
+    flex: 1 1 100%;
+    white-space: normal;
+    line-height: 1.3;
+  }
+
+  .chrono-sm-badge img {
+    width: 20px;
+    height: 20px;
+  }
+
+  .chrono-panel-card {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .chrono-panel-card > span:not(.chrono-badge) {
+    flex: 1 1 calc(100% - 30px);
+    min-width: 0;
+    line-height: 1.35;
+  }
+
+  .chrono-panel-card img {
+    width: 22px;
+    height: 22px;
+  }
+
+  .chrono-panel-card .chrono-badge {
+    flex: 1 0 100%;
+    margin-left: 30px;
+  }
+
+  #chronoBreakdownBody {
+    overflow-x: auto;
+  }
+
+  #tierlist > .d-flex.flex-wrap.gap-2.mb-3.align-items-center > button {
+    flex: 1 1 calc(50% - 0.5rem);
+  }
+
+  #tierlist > .d-flex.flex-wrap.gap-2.mb-3.align-items-center > label {
+    flex: 1 1 100%;
+    margin-left: 0 !important;
+  }
+
+  #tierlistNick {
+    flex: 1 1 100%;
+    max-width: none !important;
+  }
+
+  #tierlist > .d-flex.flex-wrap.gap-2.align-items-center.mt-3.mb-1 > span {
+    flex: 1 1 100%;
+  }
+
+  #tierlistFilterArea,
+  #tierlistFilterRarity {
+    flex: 1 1 calc(50% - 0.5rem);
+    max-width: none;
+  }
+
+  .tierlist-pool {
+    padding: 6px;
+    gap: 3px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  #smGrid {
+    --bs-gutter-x: 0.5rem;
+    --bs-gutter-y: 0.5rem;
+  }
+
+  #smGrid .sm-card-col {
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  #supermanagers > .d-flex.flex-wrap.gap-2.align-items-center.mb-3 {
+    align-items: stretch !important;
+  }
+
+  #supermanagers > .d-flex.flex-wrap.gap-2.align-items-center.mb-3 > div:first-child {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  #supermanagers > .d-flex.flex-wrap.gap-2.align-items-center.mb-3 select.form-select-sm,
+  #supermanagers > .d-flex.flex-wrap.gap-2.align-items-center.mb-3 .form-check-inline {
+    flex: 1 1 calc(50% - 0.5rem);
+    min-width: 0;
+  }
+
+  .filter-select-sm,
+  .filter-select-md,
+  .filter-select-lg {
+    max-width: none !important;
+  }
+
+  #supermanagers > .d-flex.flex-wrap.gap-2.align-items-center.mb-3 .form-check-inline {
+    margin-right: 0;
+    font-size: 0.8rem !important;
+  }
+
+  .sm-card {
+    border-width: 2px;
+  }
+
+  .sm-card-controls {
+    gap: 2px;
+    padding: 2px 4px;
+  }
+
+  .sm-elements {
+    top: 3px;
+    right: 3px;
+  }
+
+  .sm-el {
+    width: 16px;
+    height: 16px;
+    font-size: 0.5rem;
+  }
+
+  .sm-unlock-btn {
+    font-size: 1rem;
+  }
+
+  .sm-max-btn,
+  .sm-p30-btn,
+  .sm-chrono-btn,
+  .sm-tl-btn {
+    font-size: 0.58rem;
+    padding: 1px 3px;
+  }
+
+  .sm-fragment-bar {
+    height: 14px;
+    line-height: 14px;
+  }
+}
+
+@media (max-width: 576px) {
+  .tierlist-label {
+    width: 40px;
+    min-width: 40px;
+    font-size: 1rem;
+  }
+  .tierlist-item {
+    width: 50px;
+    height: 50px;
+    border-width: 2px;
+  }
+  .tierlist-items {
+    min-height: 56px;
+    padding: 4px;
+    gap: 3px;
+  }
+  .tierlist-pool {
+    padding: 6px;
+    gap: 3px;
+  }
+}

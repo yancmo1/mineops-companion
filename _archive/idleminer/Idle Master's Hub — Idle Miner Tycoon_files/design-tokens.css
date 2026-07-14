@@ -1,0 +1,180 @@
+/* NDS-inspired Design Tokens
+   Centralized CSS custom properties for the Idle Master's Hub design system.
+   Loaded before all other CSS so tokens are available everywhere. */
+
+:root {
+  /* --- Surface / Background (warm dark) --- */
+  --surface-900: #1a1714;
+  --surface-800: #252220;
+  --surface-700: #302c28;
+  --surface-600: #3d3732;
+  --surface-500: #4a4440;
+
+  /* --- Content area (warm ivory) --- */
+  --content-bg: #faf8f5;
+  --content-bg-alt: #f2efe9;
+  --content-text: #2c2519;
+  --content-text-muted: #6b6259;
+
+  /* --- Accent: Gold --- */
+  --accent-gold: #d4a937;
+  --accent-gold-light: #f5d77a;
+  --accent-gold-glow: rgba(212, 169, 55, 0.35);
+
+  /* --- Accent: Primary (NDS-inspired deep green) --- */
+  --accent-primary: #4a7c59;
+  --accent-primary-hover: #366e46;
+  --accent-primary-light: #e8f0eb;
+
+  /* --- Accent: Functional --- */
+  --accent-danger: #c0392b;
+  --accent-danger-light: #ff6b6b;
+  --accent-success: #2f9e44;
+  --accent-success-bright: #6bcb77;
+  --accent-info: #2980b9;
+  --accent-info-bright: #4da6ff;
+  --accent-warning: #f5a623;
+  --accent-warning-bright: #ffd93d;
+
+  /* --- Rarity (game-canonical) ---
+     Each rarity has a primary color (border, fill) and a "stop" color used as
+     the second gradient stop on avatars/fragment bars. In light mode the stop
+     is brighter than the primary (gradient brightens going down-right). In
+     dark mode the [data-theme='dark'] block below mirrors Dark Reader's
+     lightness inversion, which makes the stop *darker* than the primary, so
+     the gradient direction visually flips — intentional, to keep the
+     avatars consistent with the rest of the DR-derived dark palette. */
+  --rarity-legendary: #f5a623;
+  --rarity-legendary-stop: #f7c948;
+  --rarity-epic: #9b59b6;
+  --rarity-epic-stop: #c39bd3;
+  --rarity-rare: #3498db;
+  --rarity-rare-stop: #85c1e9;
+  --rarity-common: #95a5a6;
+  --rarity-common-stop: #bdc3c7;
+
+  /* --- Element colors (game-canonical, untouched) --- */
+  --el-flame: #e74c3c;
+  --el-frost: #3498db;
+  --el-nature: #27ae60;
+  --el-wind: #95a5a6;
+  --el-water: #2980b9;
+  --el-dark: #2c3e50;
+  --el-light: #f39c12;
+  --el-sand: #d4a437;
+  --el-order: #b0b0b0;
+  --el-chaos: #1a1a2e;
+  /* Text-use variant of chaos: matches --el-chaos in light mode but stays
+     readable in dark mode (where --el-chaos is darkened for backgrounds). */
+  --el-chaos-text: #1a1a2e;
+
+  /* --- Typography --- */
+  --font-display: 'Cinzel', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-correction: 'Permanent Marker', cursive;
+  --font-mono: 'Courier New', monospace;
+
+  /* --- Spacing scale --- */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+
+  /* --- Border radius --- */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* --- Transitions --- */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+
+  /* --- Borders (semantic, theme-flippable) --- */
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.18);
+
+  /* --- Shadows --- */
+  --shadow-color: rgba(0, 0, 0, 0.12);
+  --shadow-color-strong: rgba(0, 0, 0, 0.24);
+}
+
+/* --- Dark theme overrides ---
+   Activated by setting [data-theme="dark"] on <html>. The FOUC-prevention
+   inline script in pages/index.html sets this attribute before paint based on
+   localStorage 'themePreference' (or system pref on first visit). */
+[data-theme='dark'] {
+  /* Computed from Dark Reader's actual output on this site, so the look is
+     pixel-equivalent to running the extension with default settings. The
+     algorithm: lightness-invert backgrounds, keep hue/saturation; brighten
+     text colors. Card backgrounds stay warm-amber because our content-bg
+     (#faf8f5 ivory) carries a slight gold cast that DR preserves. */
+
+  /* Surfaces (page shell). DR maps our warm-dark surfaces to cool near-black */
+  --surface-900: #181a1b;
+  --surface-800: #1a1c1d;
+  --surface-700: #232627;
+  --surface-600: #2c2f31;
+  --surface-500: #383c3f;
+
+  /* Content panels: DR transforms ivory → warm dark amber (keeps the slight
+     gold cast in #faf8f5). Cards visibly warm vs the cooler shell. */
+  --content-bg: #282014;
+  --content-bg-alt: #2a2317;
+  --content-text: #e8e6e3;
+  --content-text-muted: #aaa398;
+
+  /* Gold accents: bg darkens, text/light variant stays bright for legibility */
+  --accent-gold: #90711f;
+  --accent-gold-light: #f4d572;
+  --accent-gold-glow: rgba(216, 177, 73, 0.35);
+
+  /* Primary green: deeper on dark */
+  --accent-primary: #3b6347;
+  --accent-primary-hover: #2b5838;
+  --accent-primary-light: #1d2d25;
+
+  /* Functional accents: DR brightens text/danger colors for legibility */
+  --accent-danger: #d85c4f;
+  --accent-danger-light: #ff6464;
+  --accent-success: #69d27d;
+  --accent-success-bright: #6bcb77;
+  --accent-info: #54a4d9;
+  --accent-info-bright: #4fb0ff;
+  --accent-warning: #f6ad34;
+  --accent-warning-bright: #ffd864;
+
+  /* Rarity: bg/gradient versions darkened (epic purple → dark purple, etc).
+     Borders darken too but stay recognizable as the rarity color. */
+  --rarity-legendary: #b57408;
+  --rarity-legendary-stop: #775905;
+  --rarity-epic: #713b87;
+  --rarity-epic-stop: #502a5f;
+  --rarity-rare: #1d6fa5;
+  --rarity-rare-stop: #154e74;
+  --rarity-common: #4f5659;
+  --rarity-common-stop: #3a3f42;
+
+  /* Elements: brightened for use as text accents */
+  --el-flame: #e95849;
+  --el-frost: #46a1de;
+  --el-nature: #5cda91;
+  --el-wind: #b9b3aa;
+  --el-water: #54a4d9;
+  --el-dark: #aec2d3;
+  --el-light: #f4a529;
+  --el-sand: #d8ac49;
+  --el-order: #c8c8c8;
+  --el-chaos: #151525;
+  /* chaos-as-text needs to be readable on dark bg; brightened from the
+     light-mode #1a1a2e while preserving its purple-blue tint so it stays
+     distinct from --el-dark (which is the cyan-blue #aec2d3). */
+  --el-chaos-text: #afafd0;
+
+  /* Borders + shadows */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --shadow-color-strong: rgba(0, 0, 0, 0.7);
+}

@@ -21,11 +21,11 @@ public extension View {
 
     func mineOpsBody() -> some View {
         font(MineOpsFont.body)
-            .foregroundStyle(Color.white.opacity(0.9))
+            .foregroundStyle(Color.primary)
     }
 
     func mineOpsCaption() -> some View {
         font(MineOpsFont.caption)
-            .foregroundStyle(Color.white.opacity(0.6))
+            .foregroundStyle(Color.secondary)
     }
 }

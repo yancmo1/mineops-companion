@@ -1,0 +1,527 @@
+/* Everdeep tab — dense ED1..EDmax reference table with per-biome section accents.
+   No biome art exists in static/, so biomes are distinguished by color only. */
+
+.everdeep-pane {
+  padding-top: 0.75rem;
+}
+
+.everdeep-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+
+.everdeep-header h2 {
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.everdeep-meta {
+  font-size: 0.8rem;
+  color: var(--content-text-muted, #666);
+}
+
+.everdeep-intro {
+  font-size: 0.85rem;
+  color: var(--content-text-muted, #666);
+  margin: 0 0 0.75rem;
+  max-width: 60rem;
+  line-height: 1.4;
+}
+
+.everdeep-loading,
+.everdeep-error {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--content-text-muted, #666);
+}
+
+.everdeep-error {
+  color: var(--accent-danger, #c0392b);
+}
+
+/* --- controls: element legend + jump-to-ED --- */
+.everdeep-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.ed-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.ed-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--content-bg-alt, #f1f3f5);
+  color: var(--content-text, #222);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    opacity 0.12s;
+}
+
+.ed-el-chip.off {
+  opacity: 0.62;
+}
+
+.ed-el-chip.on {
+  border-color: var(--accent-info);
+  background: color-mix(in srgb, var(--accent-info) 20%, var(--content-bg));
+  opacity: 1;
+}
+
+.ed-el-chip:hover {
+  opacity: 1;
+}
+
+.ed-clear {
+  padding: 3px 11px;
+  color: var(--content-text-muted, #666);
+}
+
+.ed-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--content-text-muted, #666);
+}
+
+.ed-jump input {
+  width: 5rem;
+  padding: 3px 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--content-bg, #fff);
+  color: var(--content-text, #222);
+  font-size: 0.82rem;
+}
+
+.ed-jump-btn {
+  padding: 3px 11px;
+  border: 1px solid var(--accent-info, #2563eb);
+  border-radius: 7px;
+  background: var(--accent-info, #2563eb);
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+/* --- table --- */
+.everdeep-table-wrap {
+  /* Cap height so the wrapper is the real scroll container — without max-height
+     overflow-x:auto coerces overflow-y to auto but the box grows to full content
+     height and never scrolls, so the sticky thead/biome headers never pin. */
+  max-height: 70vh;
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px var(--shadow-color);
+}
+
+.everdeep-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.everdeep-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--content-bg-alt, #f1f3f5);
+  color: var(--content-text, #222);
+  text-align: left;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border-strong);
+}
+
+.everdeep-table th.ed-num,
+.everdeep-table td.ed-num,
+.everdeep-table th.ed-cash,
+.everdeep-table td.ed-cash {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.everdeep-table tbody td,
+.everdeep-table tbody th {
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ed-id {
+  font-weight: 600;
+  color: var(--content-text, #222);
+}
+
+/* Compact, low-emphasis "Plan in Chrono" button inside the dense ED# column. */
+.ed-plan-btn {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--accent-info);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent-info) 45%, transparent);
+  border-radius: 4px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.ed-plan-btn:hover {
+  color: var(--content-bg);
+  background: var(--accent-info);
+  border-color: var(--accent-info);
+}
+
+.ed-plan-btn:focus-visible {
+  outline: 2px solid var(--accent-info);
+  outline-offset: 1px;
+}
+
+.ed-row-dim {
+  opacity: 0.4;
+}
+
+.ed-row-hit td,
+.ed-row-hit th {
+  background: color-mix(in srgb, var(--accent-info) 16%, var(--content-bg));
+}
+
+.ed-row-flash td,
+.ed-row-flash th {
+  animation: ed-flash 1.6s ease-out;
+}
+
+@keyframes ed-flash {
+  0%,
+  30% {
+    background: color-mix(in srgb, var(--accent-warning) 32%, var(--content-bg));
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.ed-muted {
+  color: var(--content-text-muted, #999);
+}
+
+.ed-cash {
+  font-weight: 600;
+}
+
+/* --- element names (color-coded text reusing the theme-adaptive --el-<slug>
+   tokens; mixed toward --content-text so pale/dark hues stay legible in both
+   themes, with a raw-token fallback for browsers without color-mix) --- */
+.ed-el-name {
+  font-weight: 600;
+}
+
+/* icon + name pairing, used only in the elevator / warehouse columns */
+.ed-el {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ed-el-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  object-fit: contain;
+}
+.ed-el-name.el-flame {
+  color: var(--el-flame);
+  color: color-mix(in srgb, var(--el-flame) 60%, var(--content-text));
+}
+.ed-el-name.el-frost {
+  color: var(--el-frost);
+  color: color-mix(in srgb, var(--el-frost) 60%, var(--content-text));
+}
+.ed-el-name.el-nature {
+  color: var(--el-nature);
+  color: color-mix(in srgb, var(--el-nature) 60%, var(--content-text));
+}
+.ed-el-name.el-wind {
+  color: var(--el-wind);
+  color: color-mix(in srgb, var(--el-wind) 60%, var(--content-text));
+}
+.ed-el-name.el-water {
+  color: var(--el-water);
+  color: color-mix(in srgb, var(--el-water) 60%, var(--content-text));
+}
+.ed-el-name.el-dark {
+  color: var(--el-dark);
+  color: color-mix(in srgb, var(--el-dark) 60%, var(--content-text));
+}
+.ed-el-name.el-light {
+  color: var(--el-light);
+  color: color-mix(in srgb, var(--el-light) 60%, var(--content-text));
+}
+.ed-el-name.el-sand {
+  color: var(--el-sand);
+  color: color-mix(in srgb, var(--el-sand) 60%, var(--content-text));
+}
+.ed-el-name.el-order {
+  color: var(--el-order);
+  color: color-mix(in srgb, var(--el-order) 60%, var(--content-text));
+}
+.ed-el-name.el-chaos {
+  color: var(--el-chaos-text);
+  color: color-mix(in srgb, var(--el-chaos-text) 60%, var(--content-text));
+}
+
+/* Mineshaft pattern is a comma-separated name list — let it wrap (the table is
+   otherwise nowrap) so long patterns don't blow out the column width. */
+.ed-pattern-cell {
+  white-space: normal;
+}
+.ed-pattern {
+  line-height: 1.5;
+}
+
+/* --- biome section headers (color-only theming) --- */
+.ed-biome-row th {
+  position: sticky;
+  top: 37px; /* sits just under the sticky column header */
+  z-index: 2;
+  padding: 6px 12px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  border-bottom: 1px solid var(--border-subtle);
+  border-left: 4px solid color-mix(in srgb, var(--ed-biome, #6366f1) 75%, var(--content-text));
+  background: color-mix(in srgb, var(--ed-biome, #6366f1) 10%, var(--content-bg-alt));
+  color: var(--content-text, #222);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ed-biome-row th:focus-visible {
+  outline: 2px solid var(--accent-info, #2563eb);
+  outline-offset: -2px;
+}
+
+/* collapse toggle: arrow points ▸ when closed, rotates 90° to ▾ when open */
+.ed-toggle {
+  display: inline-block;
+  width: 0.9em;
+  margin-right: 3px;
+  color: var(--content-text-muted, #888);
+  transition: transform 0.15s ease;
+}
+
+.ed-group.open .ed-toggle {
+  transform: rotate(90deg);
+}
+
+.ed-group:not(.open) tr.ed-row {
+  display: none;
+}
+
+.ed-biome-note {
+  margin-left: 4px;
+  color: var(--content-text-muted, #888);
+  font-weight: 400;
+  font-size: 0.74rem;
+  font-style: italic;
+}
+
+.ed-biome-name {
+  color: color-mix(in srgb, var(--ed-biome, #6366f1) 55%, var(--content-text));
+}
+
+.ed-biome-range {
+  color: var(--content-text-muted, #555);
+  font-weight: 500;
+}
+
+.ed-biome-count {
+  color: var(--content-text-muted, #888);
+  font-weight: 400;
+  font-size: 0.76rem;
+}
+
+/* Per-biome accent color only — the header bg, left bar and name are all
+   derived from it via color-mix (see .ed-biome-row th / .ed-biome-name), so it
+   stays clean and legible in both themes without per-theme background overrides. */
+.biome-forest {
+  --ed-biome: #2e7d32;
+}
+.biome-crystal {
+  --ed-biome: #7b3fa0;
+}
+.biome-mushroom {
+  --ed-biome: #c2410c;
+}
+.biome-ancient {
+  --ed-biome: #b08433;
+}
+.biome-spire {
+  --ed-biome: #2563eb;
+}
+.biome-chaos {
+  --ed-biome: #4b3f72;
+}
+.biome-default {
+  --ed-biome: #6366f1;
+}
+
+/* --- collapsible per-component cost breakdown --- */
+/* The "Cash to max" value becomes a caret toggle; clicking expands the
+   .ed-breakdown-row beneath it with the per-shaft / E / WH / barrier split. */
+.ed-cash-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+  margin: -1px -4px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ed-cash-toggle:hover {
+  background: color-mix(in srgb, var(--accent-info) 14%, transparent);
+}
+
+.ed-cash-toggle:focus-visible {
+  outline: 2px solid var(--accent-info, #2563eb);
+  outline-offset: 1px;
+}
+
+.ed-bd-caret {
+  display: inline-block;
+  color: var(--content-text-muted, #888);
+  transition: transform 0.15s ease;
+}
+
+.ed-cash-toggle.open .ed-bd-caret {
+  transform: rotate(90deg);
+}
+
+/* Breakdown row is hidden until its toggle opens it, and always hidden while
+   its biome group is collapsed (group state wins). */
+.ed-breakdown-row {
+  display: none;
+}
+.ed-breakdown-row.open {
+  display: table-row;
+}
+.ed-group:not(.open) .ed-breakdown-row {
+  display: none;
+}
+
+.ed-bd-cell {
+  padding: 0 !important;
+  white-space: normal;
+  background: color-mix(in srgb, var(--content-text) 4%, var(--content-bg));
+}
+
+.ed-bd {
+  padding: 10px 16px 12px;
+  max-width: 46rem;
+}
+
+.ed-bd-group + .ed-bd-group {
+  margin-top: 8px;
+}
+
+.ed-bd-head {
+  margin-bottom: 2px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--content-text-muted, #888);
+}
+
+.ed-bd-sub {
+  opacity: 0.8;
+}
+
+.ed-bd-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ed-bd-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 0.8rem;
+}
+
+.ed-bd-label {
+  flex: 1 1 9rem;
+  min-width: 7rem;
+}
+
+.ed-bd-track {
+  flex: 0 0 7rem;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--content-text) 10%, transparent);
+}
+
+.ed-bd-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent-info, #2563eb);
+}
+
+.ed-bd-pct {
+  flex: 0 0 3.2rem;
+  text-align: right;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--content-text-muted, #777);
+}
+
+.ed-bd-cost {
+  flex: 0 0 5rem;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ed-bd-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-strong);
+  font-size: 0.84rem;
+}
+
+.ed-bd-total strong {
+  font-variant-numeric: tabular-nums;
+}

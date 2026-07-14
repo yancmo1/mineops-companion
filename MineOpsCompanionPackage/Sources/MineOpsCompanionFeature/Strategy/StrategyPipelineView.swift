@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct StrategyPipelineView: View {
-    @EnvironmentObject private var review: OCRReviewViewModel
     @StateObject private var pipeline = AIStrategyPipeline.shared
     
     // Persisted mine settings
@@ -336,7 +335,6 @@ struct StrategyPipelineView: View {
                 MineOpsSettingsView()
             }
             .task { seedSelectionIfNeeded() }
-            .onChange(of: review.recognized) { _, _ in seedSelectionIfNeeded() }
             // Persist mine type selection
             .onChange(of: selectedMineType) { _, newType in
                 settingsStore.selectedMineType = newType
@@ -476,44 +474,19 @@ private extension StrategyPipelineView {
 }
 
 private extension StrategyPipelineView {
+    /// Currently empty placeholder — sync is the only import path;
+    /// manager roster will be wired here after sync data is available.
+    var managerOptions: [ManagerOption] { [] }
+
+    var selectedManagerNames: [String] { [] }
+
+    var selectedRecognizedManagers: [RecognizedSM] { [] }
+
     struct ManagerOption: Identifiable {
         let id: String
         let name: String
         let detail: String?
     }
 
-    var managerOptions: [ManagerOption] {
-        var seen = Set<String>()
-        return review.recognized.compactMap { sm in
-            let identifier = sm.directoryMatch?.id ?? sm.resolvedName
-            guard seen.insert(identifier).inserted else { return nil }
-            let role: String?
-            if let explicitRole = sm.role, !explicitRole.isEmpty {
-                role = explicitRole
-            } else if let department = sm.directoryMatch?.department {
-                role = department.capitalized
-            } else {
-                role = nil
-            }
-            return ManagerOption(id: identifier, name: sm.resolvedName, detail: role)
-        }
-        .sorted { $0.name < $1.name }
-    }
-
-    var selectedManagerNames: [String] {
-        managerOptions
-            .filter { selectedManagerIDs.contains($0.id) }
-            .map { $0.name }
-    }
-
-    var selectedRecognizedManagers: [RecognizedSM] {
-        let ids = selectedManagerIDs
-        return review.recognized
-            .filter {
-                // Use the same identifier logic as managerOptions to avoid mismatch.
-                let identifier = $0.directoryMatch?.id ?? $0.resolvedName
-                return ids.contains(identifier)
-            }
-            .sorted { $0.resolvedName.localizedCaseInsensitiveCompare($1.resolvedName) == .orderedAscending }
-    }
+    private static func loadManagerOptions() -> [ManagerOption] { [] }
 }

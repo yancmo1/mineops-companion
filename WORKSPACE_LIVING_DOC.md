@@ -143,3 +143,27 @@ Append short entries here when changes affect:
 - This catches accidental key drift (missing/extra/renamed ids) independently of the exporter's in-code key list
 - Added explicit assertions to require `rabbit-blingsley` and forbid `rabbid-blingsley` in exported key universe
 
+### 2026-07-13: Kolibri personal sync hardcoded + manual-first debug flow
+- Added hardcoded personal Kolibri defaults (player ID, auth token, save key) in `KolibriCredentialsStore` with optional user override support in Settings
+- Reworked `KolibriAPIClient` save decoding to handle real Capsule payload format (`U58U` header → base64 decode → gzip inflate via zlib) and parse `Data.SuperManagers.Managers`
+- Added sync diagnostics model + UI debug panel showing HTTP status, payload format, raw/decoded byte counts, parsed manager count, and payload hex prefix
+- Updated sync flow to stay manual by default, with optional auto-sync behind an explicit disclosure/toggle
+- On successful manual sync, the app now builds a recognized manager roster from synced data and replaces OCR roster so strategy screens can use synced managers directly
+- Risks/mitigations: hardcoded credentials are intentionally temporary for personal use; clear action now removes local overrides and falls back to hardcoded defaults to avoid lockout
+- Follow-up: replace hardcoded credential constants with a safer per-device secret path once personal testing phase is complete
+
+### 2026-07-13: V2 app — idle-miners.com data + dual AI provider + sync progress merger
+- Replaced entire app with new V2 architecture under `V2/` directory
+- Added `SMMasterDataService` — fetches SM master data (111 entries with sprites, elements, passives, actives, scaling) from idle-miners.com API on launch
+- Added `SMProgressService` — merges Kolibri sync game data (gameId matched) with master data, persists progress to UserDefaults
+- Added `AIProviderConfig` + `V2StrategyService` — dual AI provider support (OpenAI via /v1/responses, DeepSeek via /chat/completions) with per-provider API key storage and model selection
+- Fixed `OpenAIKeyStore` from `actor` → `final class @unchecked Sendable` to allow synchronous calls from @MainActor views
+- Added DeepSeek API key field to Settings alongside provider picker and per-provider model override
+- New screens: Dashboard (overview cards + area coverage + top unlocked), Managers (searchable grid with sprite images, filter by department, detail view with elements/passives/active), Strategy (provider picker, mine details, AI strategy generation with enriched data)
+- ContentView now loads master data on launch, then shows 4-tab V2 layout
+- Sync tab now writes to `SMProgressService` instead of old OCRReviewViewModel
+- Deleted old `CommandCenterViewV2` OCR-import sections, `StrategyPipelineView`/`StrategySummaryView` OCR env refs
+- Old `StrategyPipelineView`, `StrategySummaryView`, `CommandCenterViewV2` remain as unused code (can be pruned next)
+- **BUILD SUCCEEDED**, **TEST SUCCEEDED** on Yancy's Phone Sim
+- Follow-up: prune old V1 screens (CommandCenterV2, StrategyPipeline, StrategySummary, SnapshotHistory), wire image caching for sprites, add manual progress editing
+

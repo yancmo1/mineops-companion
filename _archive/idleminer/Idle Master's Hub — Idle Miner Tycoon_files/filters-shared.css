@@ -1,0 +1,306 @@
+/* --- Filter control utility classes (replacing inline styles) --- */
+.filter-select-sm {
+  max-width: 140px;
+}
+.filter-select-md {
+  max-width: 180px;
+}
+.filter-select-lg {
+  max-width: 220px;
+}
+.filter-search-wrap {
+  position: relative;
+  max-width: 200px;
+}
+
+/* Crystal Planner */
+.crystal-summary-card {
+  background: rgba(30, 30, 60, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px 16px;
+  text-align: center;
+  min-width: 100px;
+}
+.crystal-summary-card.crystal-blue {
+  border-left: 3px solid var(--accent-info-bright);
+}
+.crystal-summary-card.crystal-red {
+  border-left: 3px solid var(--accent-danger-light);
+}
+.crystal-summary-card.crystal-discount {
+  border-left: 3px solid var(--accent-warning-bright);
+}
+.crystal-summary-card.crystal-time {
+  border-left: 3px solid var(--accent-success-bright);
+}
+.crystal-summary-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+}
+.crystal-summary-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+/* Blue/Red crystal art on summary cards + next to the blue/red input labels. */
+.crystal-icon {
+  width: 18px;
+  height: 18px;
+  vertical-align: -3px;
+  margin-right: 4px;
+}
+.crystal-summary-label .crystal-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: -2px;
+  margin-right: 3px;
+}
+.crystal-table {
+  font-size: 0.85rem;
+}
+.crystal-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  border-bottom-width: 1px;
+}
+.crystal-table td {
+  vertical-align: middle;
+}
+.crystal-promo-row {
+  background: rgba(255, 107, 107, 0.08);
+}
+.crystal-cap-row {
+  background: rgba(255, 217, 61, 0.06);
+}
+.crystal-promo-row.crystal-cap-row {
+  background: rgba(255, 160, 80, 0.08);
+}
+.crystal-adjust-cell {
+  white-space: nowrap;
+}
+.crystal-adjust-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  line-height: 22px;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ccc;
+}
+.crystal-adjust-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.crystal-app-count {
+  display: inline-block;
+  min-width: 24px;
+  text-align: center;
+  font-weight: 600;
+}
+.crystal-range-box {
+  position: relative;
+  padding: 8px 10px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.crystal-range-label {
+  position: absolute;
+  top: -8px;
+  left: 10px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 4px;
+  line-height: 1;
+  background: var(--bs-card-bg, #1a1d21);
+}
+.crystal-range-from {
+  background: rgba(77, 166, 255, 0.05);
+  border-color: rgba(77, 166, 255, 0.2);
+}
+.crystal-range-from .crystal-range-label {
+  color: var(--accent-info-bright);
+}
+.crystal-range-to {
+  background: rgba(107, 203, 119, 0.05);
+  border-color: rgba(107, 203, 119, 0.2);
+}
+.crystal-range-to .crystal-range-label {
+  color: var(--accent-success-bright);
+}
+
+/* Essence Planner */
+.essence-summary-card {
+  background: rgba(30, 30, 60, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 10px 16px;
+  text-align: center;
+  min-width: 100px;
+}
+.essence-summary-card.essence-sm-name {
+  border-left: 3px solid var(--accent-gold-light);
+}
+.essence-summary-card.essence-frags {
+  border-left: 3px solid var(--accent-info-bright);
+}
+.essence-summary-card.essence-total {
+  border-left: 3px solid var(--accent-success-bright);
+}
+.essence-summary-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+}
+.essence-summary-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.essence-rank-card {
+  background: rgba(30, 30, 60, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.essence-rank-header {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent-gold-light);
+  margin-bottom: 8px;
+}
+.essence-element-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.85rem;
+}
+.essence-total-table {
+  font-size: 0.85rem;
+  color: #dee2e6;
+  --bs-table-bg: transparent;
+  --bs-table-color: #dee2e6;
+  --bs-table-border-color: rgba(255, 255, 255, 0.1);
+}
+.essence-total-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  border-bottom-width: 1px;
+}
+.essence-total-table td {
+  vertical-align: middle;
+  color: #dee2e6;
+}
+.essence-total-table .essence-surplus {
+  color: var(--accent-success-bright);
+}
+.essence-total-table .essence-deficit {
+  color: var(--accent-danger-light);
+}
+.essence-surplus {
+  color: var(--accent-success-bright);
+  font-weight: 600;
+}
+.essence-deficit {
+  color: var(--accent-danger-light);
+  font-weight: 600;
+}
+.essence-rank-unaffordable {
+  opacity: 0.65;
+}
+.essence-cutoff-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: var(--accent-danger-light);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.essence-cutoff-divider::before,
+.essence-cutoff-divider::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-danger-light), transparent);
+}
+.essence-affordable-badge {
+  background: rgba(107, 203, 119, 0.12);
+  border: 1px solid rgba(107, 203, 119, 0.3);
+  border-radius: 6px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: var(--accent-success-bright);
+  text-align: center;
+}
+.essence-affordable-badge.essence-affordable-none {
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.3);
+  color: var(--accent-danger-light);
+}
+
+/* --- Options tab: text size buttons --- */
+.text-size-btn.active {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+.text-size-btn.active:hover {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+}
+
+/* --- Card grid adjustments per text size --- */
+@media (min-width: 992px) {
+  html.ts-875 #smGrid .sm-card-col {
+    flex: 0 0 14.285%;
+    max-width: 14.285%;
+    width: 14.285%;
+  }
+  html.ts-115 #smGrid .sm-card-col {
+    flex: 0 0 20%;
+    max-width: 20%;
+    width: 20%;
+  }
+  html.ts-130 #smGrid .sm-card-col {
+    flex: 0 0 25%;
+    max-width: 25%;
+    width: 25%;
+  }
+  html.ts-150 #smGrid .sm-card-col {
+    flex: 0 0 33.333%;
+    max-width: 33.333%;
+    width: 33.333%;
+  }
+}
+@media (min-width: 768px) and (max-width: 991.98px) {
+  html.ts-875 #smGrid .sm-card-col {
+    flex: 0 0 20%;
+    max-width: 20%;
+    width: 20%;
+  }
+  html.ts-130 #smGrid .sm-card-col {
+    flex: 0 0 33.333%;
+    max-width: 33.333%;
+    width: 33.333%;
+  }
+  html.ts-150 #smGrid .sm-card-col {
+    flex: 0 0 50%;
+    max-width: 50%;
+    width: 50%;
+  }
+}

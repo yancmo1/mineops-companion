@@ -6,7 +6,7 @@ import Security
 /// Why Keychain?
 /// - Environment variables are not available on iPhone/TestFlight.
 /// - Keys should never be committed to the repo or shipped in the app binary.
-public actor OpenAIKeyStore {
+public final class OpenAIKeyStore: @unchecked Sendable {
     public enum KeychainError: LocalizedError {
         case keyNotFound
         case invalidKey
@@ -27,21 +27,18 @@ public actor OpenAIKeyStore {
     public static let shared = OpenAIKeyStore()
 
     /// A stable Keychain service name.
-    /// Keep this constant to preserve items across updates.
-    private let service: String
-    private let account = "OPENAI_API_KEY"
+    private static let serviceName = (Bundle.main.bundleIdentifier ?? "com.example.mineopscompanion") + ".openai"
+    private static let accountName = "OPENAI_API_KEY"
 
-    public init(service: String = (Bundle.main.bundleIdentifier ?? "com.example.mineopscompanion") + ".openai") {
-        self.service = service
-    }
+    public init() {}
 
     /// Reads the API key from Keychain.
     public func loadKey() -> String? {
         var item: CFTypeRef?
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrService as String: Self.serviceName,
+            kSecAttrAccount as String: Self.accountName,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
@@ -63,13 +60,12 @@ public actor OpenAIKeyStore {
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrService as String: Self.serviceName,
+            kSecAttrAccount as String: Self.accountName,
         ]
 
         let attributes: [String: Any] = [
             kSecValueData as String: data,
-            // Persist through reboots and allow background usage after first unlock.
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
         ]
 
@@ -90,10 +86,15 @@ public actor OpenAIKeyStore {
     public func clearKey() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrService as String: Self.serviceName,
+            kSecAttrAccount as String: Self.accountName,
         ]
         SecItemDelete(query as CFDictionary)
+    }
+
+    /// Quick check whether a key exists in the keychain.
+    public func hasKey() -> Bool {
+        loadKey() != nil
     }
 
     /// Returns the key used by the app.
@@ -103,7 +104,7 @@ public actor OpenAIKeyStore {
     /// 2) Process environment (local dev / simulator convenience)
     public func resolvedAPIKey() -> String? {
         if let key = loadKey() { return key }
-        let env = ProcessInfo.processInfo.environment[account]?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let env = ProcessInfo.processInfo.environment["OPENAI_API_KEY"]?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let env, !env.isEmpty { return env }
         return nil
     }

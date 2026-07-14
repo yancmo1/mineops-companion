@@ -1,0 +1,311 @@
+/* Orbitron is requested via the shared Google Fonts <link> in index.html (it is
+   used here and in the Stella tab); a CSS @import here would be a serial,
+   render-blocking second request. */
+#mainTabs {
+  gap: 0.25rem;
+}
+
+.fm-calculator-pane {
+  padding-top: 1rem;
+}
+
+.fm-shell {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(245, 200, 126, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(66, 153, 225, 0.16), transparent 30%),
+    linear-gradient(180deg, var(--content-bg) 0%, var(--content-bg-alt) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 26px;
+  box-shadow: 0 26px 60px var(--shadow-color);
+}
+
+.fm-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.25rem;
+  padding: 1.4rem 1.5rem 1.1rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.fm-hero-copy {
+  max-width: 760px;
+}
+
+.fm-eyebrow {
+  margin-bottom: 0.45rem;
+  color: var(--accent-warning);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fm-title {
+  margin: 0;
+  color: var(--content-text);
+  font-family: 'Orbitron', monospace;
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.fm-lead {
+  margin: 0.75rem 0 0;
+  color: var(--content-text-muted);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.fm-view-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.fm-view-btn {
+  min-width: 118px;
+  padding: 0.6rem 0.95rem;
+  color: var(--content-text);
+  font-size: 0.88rem;
+  font-weight: 700;
+  background: var(--content-bg-alt);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.fm-view-btn:hover {
+  background: var(--content-bg);
+  border-color: var(--border-strong);
+  box-shadow: 0 10px 20px var(--shadow-color);
+}
+
+.fm-view-btn.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%);
+  border-color: transparent;
+  box-shadow: 0 12px 24px rgba(74, 124, 89, 0.25);
+}
+
+.fm-info-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.8rem 1.5rem;
+  background: var(--content-bg-alt);
+  color: var(--content-text-muted);
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.fm-info-divider {
+  color: var(--content-text-muted);
+  opacity: 0.6;
+}
+
+.fm-body {
+  padding: 1.5rem;
+}
+
+.fm-view {
+  display: none;
+}
+
+.fm-view.active {
+  display: block;
+}
+
+.fm-panel-intro {
+  margin-bottom: 1rem;
+}
+
+.fm-panel-intro h4 {
+  margin-bottom: 0.3rem;
+  color: var(--content-text);
+}
+
+.fm-panel-intro p {
+  color: var(--content-text-muted);
+}
+
+.fm-calculator-pane .card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  box-shadow: 0 14px 28px var(--shadow-color);
+}
+
+.fm-calculator-pane .card-header {
+  border-bottom: 0;
+}
+
+.fm-calculator-pane .card-body {
+  padding: 1.1rem 1.15rem 1.2rem;
+}
+
+.fm-calculator-pane .mb-3 {
+  margin-bottom: 0.8rem !important;
+}
+
+.fm-calculator-pane .form-label {
+  margin-bottom: 0.3rem;
+  color: var(--content-text);
+}
+
+.fm-submit-btn {
+  border-radius: 14px;
+  padding-block: 0.8rem;
+  font-weight: 700;
+}
+
+.fm-results-card {
+  min-height: 100%;
+}
+
+.fm-results-hint {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.78rem;
+}
+
+.fm-empty-state {
+  padding: 1.3rem 0.3rem;
+  text-align: center;
+}
+
+.fm-empty-state h5 {
+  margin-bottom: 0.45rem;
+  color: var(--content-text);
+}
+
+.fm-calculator-pane .alert {
+  margin-bottom: 1rem;
+  border-radius: 14px;
+}
+
+.fm-calculator-pane .result-item {
+  margin: 0.5rem 0;
+  padding: 0.9rem 0.95rem;
+  background: var(--content-bg-alt);
+  border-left: 4px solid var(--accent-success);
+  border-radius: 14px;
+}
+
+.fm-calculator-pane .result-value {
+  color: var(--accent-success);
+  font-size: 1.28rem;
+  font-weight: 700;
+}
+
+.fm-calculator-pane .pass-checkbox {
+  height: 100%;
+  margin: 0;
+  padding: 0.8rem;
+  background: var(--content-bg-alt);
+  border: 1px solid rgba(218, 184, 106, 0.45);
+  border-radius: 16px;
+  cursor: pointer;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease,
+    border-color 0.14s ease;
+}
+
+.fm-calculator-pane .pass-checkbox:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px var(--shadow-color);
+}
+
+.fm-calculator-pane .pass-checkbox * {
+  cursor: pointer;
+}
+
+.fm-calculator-pane .premium-pass {
+  background: linear-gradient(180deg, rgba(140, 104, 209, 0.08) 0%, var(--content-bg) 100%);
+  border-color: rgba(140, 104, 209, 0.38);
+}
+
+.fm-calculator-pane .elite-pass {
+  background: linear-gradient(180deg, rgba(255, 107, 53, 0.08) 0%, var(--content-bg) 100%);
+  border-color: rgba(255, 107, 53, 0.34);
+}
+
+.fm-calculator-pane .data-table-container {
+  max-height: 70vh;
+  overflow: auto;
+  background: var(--content-bg);
+  border-radius: 0 0 18px 18px;
+}
+
+.fm-calculator-pane .data-table {
+  font-size: 0.84rem;
+}
+
+.fm-calculator-pane .data-table th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  color: #fff;
+  white-space: nowrap;
+  background: var(--accent-primary);
+}
+
+.fm-calculator-pane .data-table td {
+  white-space: nowrap;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.fm-calculator-pane .furthest-barrier-row {
+  position: relative;
+}
+
+.fm-calculator-pane .furthest-barrier-row::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  background: var(--accent-success);
+}
+
+.fm-calculator-pane .breakpoint-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 30px;
+  margin: 8px 0;
+  padding: 0.2rem 0.6rem;
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 10px;
+}
+
+.fm-calculator-pane .breakpoint-line.free-user {
+  background: linear-gradient(90deg, #28a745, #20c997);
+}
+
+.fm-calculator-pane .breakpoint-line.premium-user {
+  background: linear-gradient(90deg, #17a2b8, #6f42c1);
+}
+
+.fm-calculator-pane .breakpoint-line.elite-user {
+  background: linear-gradient(90deg, #ffc107, #fd7e14);
+}
+
+.fm-calculator-pane #fcChartContainer {
+  position: relative;
+  height: 230px;
+  margin: 12px 0;
+  padding: 8px;
+  background: var(--content-bg-alt);
+  border-radius: 14px;
+}

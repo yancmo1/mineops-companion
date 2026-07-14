@@ -2,7 +2,6 @@ import SwiftUI
 
 struct MineOpsSettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var review: OCRReviewViewModel
 
     @State private var existingKeySuffix: String?
     @State private var isKeySet = false
@@ -16,9 +15,40 @@ struct MineOpsSettingsView: View {
 
     @State private var confirmClearAllData = false
 
+    // AI Provider settings
+    @State private var selectedProvider: AIProvider = AIProviderConfig.shared.activeProvider
+    @State private var deepSeekKey = ""
+    @State private var openAIModel = AIProviderConfig.shared.openAIModel
+    @State private var deepSeekModel = AIProviderConfig.shared.deepSeekModel
+    @State private var revealDeepSeek = false
+    
+    // Kolibri settings
+    @State private var kolibriId = ""
+    @State private var kolibriAuthToken = ""
+    @State private var kolibriSaveGameKey = "0"
+    @State private var revealAuthToken = false
+
     var body: some View {
         NavigationStack {
             Form {
+                Section("AI Provider") {
+                    Picker("Provider", selection: $selectedProvider) {
+                        ForEach(AIProvider.allCases, id: \.self) { provider in
+                            Text(provider.displayName).tag(provider)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .onChange(of: selectedProvider) { _, newValue in
+                        AIProviderConfig.shared.activeProvider = newValue
+                    }
+
+                    if selectedProvider == .openAI {
+                        openAISection
+                    } else {
+                        deepSeekSection
+                    }
+                }
+                
                 Section("OpenAI") {
                     VStack(alignment: .leading, spacing: 8) {
                         if isKeySet {
@@ -102,9 +132,105 @@ struct MineOpsSettingsView: View {
                 }
 
                 Section("Privacy") {
-                    Text("Never share your API key. For TestFlight, each tester must enter their own key.")
+                    Text("Never share your API keys. For TestFlight, each tester must enter their own key.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                }
+                
+                Section("Kolibri API") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Connect to Kolibri Game Services to automatically sync your game data instead of using OCR.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        
+                        if !KolibriCredentialsStore.shared.hasCredentials {
+                            Text("Credentials not configured")
+                                .font(.subheadline)
+                                .foregroundStyle(.orange)
+                        } else if KolibriCredentialsStore.shared.usingHardcodedDefaults {
+                            Text("Using hardcoded personal defaults")
+                                .font(.subheadline)
+                                .foregroundStyle(.yellow)
+                        } else {
+                            Text("Credentials configured")
+                                .font(.subheadline)
+                                .foregroundStyle(.green)
+                        }
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 10) {
+                        TextField("Kolibri ID", text: $kolibriId)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .accessibilityIdentifier("kolibriIdField")
+                        
+                        HStack {
+                            if revealAuthToken {
+                                TextField("Authorization Token", text: $kolibriAuthToken)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled(true)
+                                    .textContentType(.password)
+                                    .accessibilityIdentifier("kolibriAuthTokenField")
+                            } else {
+                                SecureField("Authorization Token", text: $kolibriAuthToken)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled(true)
+                                    .textContentType(.password)
+                                    .accessibilityIdentifier("kolibriAuthTokenField")
+                            }
+                            
+                            Button(revealAuthToken ? "Hide" : "Show") {
+                                revealAuthToken.toggle()
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("toggleRevealAuthTokenButton")
+                        }
+                        
+                        TextField("Save Game Key", text: $kolibriSaveGameKey)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .accessibilityIdentifier("kolibriSaveGameKeyField")
+                        
+                        HStack {
+                            Button("Save Credentials") {
+                                saveKolibriCredentials()
+                            }
+                            .disabled(kolibriId.isEmpty || kolibriAuthToken.isEmpty)
+                            .accessibilityIdentifier("saveKolibriCredsButton")
+                            
+                            Button(role: .destructive) {
+                                clearKolibriCredentials()
+                            } label: {
+                                Text("Clear")
+                            }
+                            .disabled(!KolibriCredentialsStore.shared.hasCredentials)
+                            .accessibilityIdentifier("clearKolibriCredsButton")
+                            
+                            Spacer()
+                        }
+                    }
+                    
+                    Text("Hardcoded credentials are currently active for personal use. You can still override them here.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Models") {
+                    if selectedProvider == .openAI {
+                        TextField("Model (e.g. gpt-4o-mini)", text: $openAIModel)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .onChange(of: openAIModel) { _, newValue in
+                                AIProviderConfig.shared.openAIModel = newValue
+                            }
+                    } else {
+                        TextField("Model (e.g. deepseek-chat)", text: $deepSeekModel)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .onChange(of: deepSeekModel) { _, newValue in
+                                AIProviderConfig.shared.deepSeekModel = newValue
+                            }
+                    }
                 }
 
                 Section("Data") {
@@ -129,6 +255,7 @@ struct MineOpsSettingsView: View {
             }
             .task {
                 await refreshStatus()
+                loadKolibriCredentials()
             }
             .confirmationDialog(
                 "Clear all data?",
@@ -138,7 +265,6 @@ struct MineOpsSettingsView: View {
                 Button("Clear All Data", role: .destructive) {
                     Task {
                         AppDataResetter.clearAllUserData()
-                        review.reload()
                         confirmClearAllData = false
                     }
                 }
@@ -189,6 +315,167 @@ struct MineOpsSettingsView: View {
         draftKey = ""
         successMessage = "Cleared."
         await refreshStatus()
+    }
+
+    // MARK: - OpenAI Section
+
+    @ViewBuilder
+    private var openAISection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("OpenAI API key")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            if isKeySet {
+                Text("Key is set" + (existingKeySuffix.map { " (…\($0))" } ?? ""))
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            } else {
+                Text("Key not set")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                if revealKey {
+                    TextField("sk-…", text: $draftKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .textContentType(.password)
+                        .accessibilityIdentifier("openAIKeyField")
+                } else {
+                    SecureField("sk-…", text: $draftKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .textContentType(.password)
+                        .accessibilityIdentifier("openAIKeyField")
+                }
+
+                Button(revealKey ? "Hide" : "Show") {
+                    revealKey.toggle()
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("toggleRevealOpenAIKeyButton")
+            }
+
+            HStack {
+                Button {
+                    Task { await saveKey() }
+                } label: {
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Text("Save")
+                    }
+                }
+                .disabled(isSaving || draftKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier("saveOpenAIKeyButton")
+
+                Button(role: .destructive) {
+                    Task { await clearKey() }
+                } label: {
+                    Text("Clear")
+                }
+                .disabled(isSaving || !isKeySet)
+                .accessibilityIdentifier("clearOpenAIKeyButton")
+
+                Spacer()
+            }
+        }
+
+        if let errorMessage {
+            Text(errorMessage)
+                .font(.footnote)
+                .foregroundStyle(.red)
+                .accessibilityIdentifier("openAIKeyError")
+        }
+
+        if let successMessage {
+            Text(successMessage)
+                .font(.footnote)
+                .foregroundStyle(.green)
+                .accessibilityIdentifier("openAIKeySuccess")
+        }
+    }
+
+    // MARK: - DeepSeek Section
+
+    @ViewBuilder
+    private var deepSeekSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("DeepSeek API key")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            if AIProviderConfig.shared.hasKey(for: .deepSeek) {
+                Text("Key is set")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            } else {
+                Text("Key not set")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+
+        HStack {
+            if revealDeepSeek {
+                TextField("sk-…", text: $deepSeekKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
+            } else {
+                SecureField("sk-…", text: $deepSeekKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
+            }
+
+            Button(revealDeepSeek ? "Hide" : "Show") {
+                revealDeepSeek.toggle()
+            }
+            .buttonStyle(.bordered)
+        }
+
+        HStack {
+            Button("Save") {
+                AIProviderConfig.shared.saveDeepSeekKey(deepSeekKey)
+                deepSeekKey = ""
+                successMessage = "DeepSeek key saved."
+            }
+            .disabled(deepSeekKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            Button(role: .destructive) {
+                AIProviderConfig.shared.clearDeepSeekKey()
+                successMessage = "DeepSeek key cleared."
+            } label: {
+                Text("Clear")
+            }
+            .disabled(!AIProviderConfig.shared.hasKey(for: .deepSeek))
+        }
+    }
+    
+    // MARK: - Kolibri Credentials
+    
+    private func loadKolibriCredentials() {
+        let store = KolibriCredentialsStore.shared
+        kolibriId = store.kolibriId
+        kolibriAuthToken = store.authToken
+        kolibriSaveGameKey = store.saveGameKey
+    }
+    
+    private func saveKolibriCredentials() {
+        let store = KolibriCredentialsStore.shared
+        store.kolibriId = kolibriId.trimmingCharacters(in: .whitespacesAndNewlines)
+        store.authToken = kolibriAuthToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        store.saveGameKey = kolibriSaveGameKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        successMessage = "Kolibri credentials saved."
+    }
+    
+    private func clearKolibriCredentials() {
+        KolibriCredentialsStore.shared.clearCredentials()
+        loadKolibriCredentials()
+        successMessage = "Saved overrides cleared (hardcoded defaults remain active)."
     }
 }
 

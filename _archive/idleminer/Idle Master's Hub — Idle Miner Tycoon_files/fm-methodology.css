@@ -1,0 +1,199 @@
+.fm-methodology-wrap {
+  padding-top: 0.15rem;
+}
+
+.fm-calculator-pane #fmPanelMethodology .card-body {
+  font-size: 0.96rem;
+  line-height: 1.7;
+}
+
+.fm-calculator-pane #fmPanelMethodology details {
+  margin-top: 10px;
+}
+
+.fm-calculator-pane #fmPanelMethodology summary {
+  color: var(--accent-primary);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fm-calculator-pane #fmPanelMethodology code {
+  padding: 2px 6px;
+  background: var(--content-bg-alt);
+  border-radius: 4px;
+  font-size: 0.88em;
+}
+
+.fm-calculator-pane #fmPanelMethodology .formula {
+  margin: 10px 0;
+  padding: 10px 14px;
+  background: var(--content-bg-alt);
+  border-left: 3px solid var(--rarity-common);
+  border-radius: 0 6px 6px 0;
+  font-family: 'Courier New', monospace;
+}
+
+.fm-calculator-pane #methodologyChartContainer {
+  position: relative;
+  height: 320px;
+  margin: 16px 0;
+  padding: 8px;
+  background: var(--content-bg-alt);
+  border-radius: 14px;
+}
+
+@media (min-width: 992px) {
+  .fm-results-card {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+@media (max-width: 767px) {
+  #mainTabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.35rem;
+    scrollbar-width: none;
+  }
+
+  #mainTabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  #mainTabs .nav-item {
+    flex: 0 0 auto;
+  }
+
+  .fm-hero {
+    flex-direction: column;
+    padding: 1.15rem 1rem 1rem;
+  }
+
+  .fm-shell {
+    border-radius: 18px;
+  }
+
+  .fm-title {
+    font-size: 1.5rem;
+  }
+
+  .fm-lead {
+    font-size: 0.92rem;
+  }
+
+  .fm-view-switcher {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.2rem;
+    scrollbar-width: none;
+  }
+
+  .fm-view-switcher::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fm-view-btn {
+    min-width: 0;
+    flex: 0 0 auto;
+  }
+
+  .fm-info-strip {
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+  }
+
+  .fm-info-divider {
+    display: none;
+  }
+
+  .fm-body {
+    padding: 0.9rem;
+  }
+
+  .fm-results-hint {
+    display: none;
+  }
+
+  .fm-calculator-pane .card {
+    border-radius: 16px;
+  }
+
+  .fm-calculator-pane .card-header {
+    padding: 0.85rem 1rem;
+  }
+
+  .fm-calculator-pane .card-body {
+    padding: 1rem;
+  }
+
+  .fm-calculator-pane .alert {
+    padding: 0.85rem 0.95rem;
+  }
+
+  .fm-calculator-pane .result-item {
+    padding: 0.8rem 0.85rem;
+  }
+
+  .fm-calculator-pane .result-value {
+    font-size: 1.08rem;
+    word-break: break-word;
+  }
+
+  .fm-calculator-pane .pass-checkbox {
+    padding: 0.75rem;
+  }
+
+  .fm-calculator-pane .data-table {
+    font-size: 0.76rem;
+  }
+
+  .fm-calculator-pane .data-table th,
+  .fm-calculator-pane .data-table td {
+    padding: 0.45rem 0.5rem;
+  }
+
+  .fm-calculator-pane .breakpoint-line {
+    font-size: 0.66rem;
+    padding: 0.3rem 0.45rem;
+  }
+
+  .fm-calculator-pane #fmPanelData .card-header,
+  .fm-calculator-pane .fm-results-card .card-header {
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: flex-start !important;
+  }
+
+  .fm-calculator-pane #fmPanelMethodology .formula {
+    overflow-x: auto;
+    font-size: 0.82rem;
+  }
+
+  #edgarOffers {
+    max-width: none !important;
+  }
+
+  .fm-calculator-pane #fcChartContainer {
+    height: 190px;
+    padding: 6px;
+  }
+
+  .fm-calculator-pane #methodologyChartContainer {
+    height: 240px;
+    padding: 6px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  #calcForm .row.g-2 > .col-6 {
+    width: 100%;
+  }
+
+  .fm-view-btn {
+    font-size: 0.82rem;
+  }
+}
