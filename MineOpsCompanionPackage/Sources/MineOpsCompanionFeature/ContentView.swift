@@ -1,9 +1,17 @@
 import SwiftUI
 
+enum V2RootTab: Hashable {
+    case today
+    case managers
+    case strategy
+    case more
+}
+
 public struct ContentView: View {
     @State private var progressService = SMProgressService.shared
     @State private var masterService = SMMasterDataService.shared
     @State private var hasInitialized = false
+    @State private var selectedTab: V2RootTab = .today
 
     public init() {}
 
@@ -12,26 +20,30 @@ public struct ContentView: View {
             if masterService.isLoading && !hasInitialized {
                 loadingView
             } else {
-                TabView {
-                    V2DashboardView()
+                TabView(selection: $selectedTab) {
+                    V2DashboardView(selectedTab: $selectedTab)
                         .tabItem {
-                            Label("Dashboard", systemImage: "rectangle.grid.2x2")
+                            Label("Today", systemImage: "sun.max.fill")
                         }
+                        .tag(V2RootTab.today)
 
                     V2ManagersView()
                         .tabItem {
                             Label("Managers", systemImage: "person.text.rectangle")
                         }
+                        .tag(V2RootTab.managers)
 
                     V2StrategyView()
                         .tabItem {
                             Label("Strategy", systemImage: "chart.bar.xaxis")
                         }
+                        .tag(V2RootTab.strategy)
 
-                    KolibriSyncView()
+                    V2MoreView()
                         .tabItem {
-                            Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                            Label("More", systemImage: "ellipsis.circle")
                         }
+                        .tag(V2RootTab.more)
                 }
                 .tint(.accentCyan)
                 .preferredColorScheme(.light)
@@ -42,8 +54,8 @@ public struct ContentView: View {
             guard !hasInitialized else { return }
             hasInitialized = true
 
-            // Load master data and progress
-            await progressService.initialize()
+            // Load master data and progress and perform one launch-time sync if credentials exist
+            await AppLaunchCoordinator.shared.initialize()
         }
     }
 

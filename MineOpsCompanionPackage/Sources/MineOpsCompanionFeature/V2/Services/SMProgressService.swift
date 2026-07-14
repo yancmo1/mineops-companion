@@ -54,53 +54,35 @@ public final class SMProgressService {
         }
 
         guard !masterService.masterData.isEmpty else { return }
-
-        // Build lookup by gameId
-        let masterByGameId: [Int: SMMasterEntry] = Dictionary(
-            uniqueKeysWithValues: masterService.masterData.map { ($0.gameId, $0) }
-        )
-
-        // Build existing lookup by gameId for merge
-        let existingByGameId: [Int: SMProgress] = Dictionary(
-            uniqueKeysWithValues: progress.compactMap { prog in
-                let id = prog.master.gameId
-                return prog.unlocked || prog.rank > 0 || prog.level > 1 || prog.promoted > 0
-                    ? (id, prog)
-                    : nil
-            }
-        )
-
+        // Build fresh defaults for all master entries
         var updated: [Int: SMProgress] = [:]
-
-        // Start from fresh defaults for all master entries
         for entry in masterService.masterData {
-            let existing = existingByGameId[entry.gameId]
             updated[entry.gameId] = SMProgress(
                 master: entry,
-                rank: existing?.rank ?? 0,
-                level: existing?.level ?? 1,
-                promoted: existing?.promoted ?? 0,
-                unlocked: existing?.unlocked ?? false,
-                fragments: existing?.fragments ?? 0
+                rank: 0,
+                level: 1,
+                promoted: 0,
+                unlocked: false,
+                fragments: 0
             )
         }
 
-        // Apply sync data
+        // Apply authoritative Kolibri values directly
         for manager in managers {
-            guard let gameId = Int(manager.id),
-                  var prog = updated[gameId] else { continue }
+            guard let gameId = Int(manager.id), var prog = updated[gameId] else { continue }
 
-            prog.level = max(prog.level, manager.level ?? 1)
-            prog.promoted = max(prog.promoted, manager.promotion ?? 0)
-            prog.rank = max(prog.rank, manager.rank ?? 0)
-            prog.fragments = manager.fragments ?? prog.fragments
+            prog.level = max(1, manager.level ?? 1)
+            prog.promoted = max(0, manager.promotion ?? 0)
+            prog.rank = max(0, manager.rank ?? 0)
+            prog.fragments = max(0, manager.fragments ?? 0)
             prog.unlocked = true
             updated[gameId] = prog
         }
 
+        // Replace progress atomically
         progress = updated.values.sorted { $0.master.name < $1.master.name }
         saveToDisk()
-        logger.info("Applied sync data: \(self.progress.filter(\.unlocked).count) unlocked SMs")
+        logger.info("Applied authoritative sync data: \(self.progress.filter(\.unlocked).count) unlocked SMs")
     }
 
     /// Update a single SM's progress manually.
@@ -138,6 +120,80 @@ public final class SMProgressService {
             result[dept] = progress.filter { $0.areaEnum == dept }.count
         }
         return result
+    }
+
+    // MARK: - Recommendations
+
+    /// Deterministic strength score for an unlocked manager.
+    ///
+    /// Formula:
+    /// - log10(max(effectiveActiveValue, 1)) * 100
+    /// - + level * 1.5
+    /// - + rank * 20
+    /// - + promoted * 10
+    /// - + rarity weight
+    public func strengthScore(for manager: SMProgress) -> Double {
+        let activeValue = max(manager.effectiveActiveValue(using: masterService.activeScaling), 1)
+        return log10(activeValue) * 100
+            + Double(manager.level) * 1.5
+            + Double(manager.rank) * 20
+            + Double(manager.promoted) * 10
+            + rarityWeight(for: manager.master.rarity)
+    }
+
+    public func strongestUnlockedManager(in department: SMDepartment) -> SMProgress? {
+        unlockedManagers(for: department)
+            .sorted { lhs, rhs in
+                let lhsScore = strengthScore(for: lhs)
+                let rhsScore = strengthScore(for: rhs)
+                if lhsScore != rhsScore {
+                    return lhsScore > rhsScore
+                }
+                return lhs.master.name.localizedCaseInsensitiveCompare(rhs.master.name) == .orderedAscending
+            }
+            .first
+    }
+
+    public func strongestByArea() -> [SMDepartment: SMProgress] {
+        var result: [SMDepartment: SMProgress] = [:]
+        for department in SMDepartment.allCases {
+            if let strongest = strongestUnlockedManager(in: department) {
+                result[department] = strongest
+            }
+        }
+        return result
+    }
+
+    /// Fragment-backed improvement opportunities.
+    ///
+    /// This intentionally uses only known data (current fragment count) and does not infer
+    /// unknown rank-up thresholds.
+    public func upgradeOpportunityManagers(limit: Int = 4) -> [SMProgress] {
+        progress
+            .filter { $0.unlocked && $0.fragments > 0 }
+            .sorted { lhs, rhs in
+                if lhs.fragments != rhs.fragments {
+                    return lhs.fragments > rhs.fragments
+                }
+                let lhsScore = strengthScore(for: lhs)
+                let rhsScore = strengthScore(for: rhs)
+                if lhsScore != rhsScore {
+                    return lhsScore > rhsScore
+                }
+                return lhs.master.name.localizedCaseInsensitiveCompare(rhs.master.name) == .orderedAscending
+            }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    private func rarityWeight(for rarity: String) -> Double {
+        switch rarity.lowercased() {
+        case "legendary": return 25
+        case "epic": return 18
+        case "rare": return 12
+        case "common": return 6
+        default: return 0
+        }
     }
 
     // MARK: - Persistence

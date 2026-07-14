@@ -56,6 +56,14 @@ public final class KolibriAPIClient: Sendable {
     
     private let logger = Logger(subsystem: "com.yancmo1.mineops", category: "KolibriAPI")
     
+    // For debugging credential issues, log masked token details when performing requests.
+    private func maskedTokenInfo(_ token: String) -> String {
+        let len = token.count
+        if len <= 6 { return "len:\(len)" }
+        let suffix = token.suffix(6)
+        return "len:\(len) suffix:••••\(suffix)"
+    }
+    
     // MARK: - Initialization
     
     public init() {
@@ -98,6 +106,9 @@ public final class KolibriAPIClient: Sendable {
         for (index, playerID) in candidatePlayerIDs.enumerated() {
             logger.info("Fetching savegame for player candidate \(index + 1, privacy: .public)/\(candidatePlayerIDs.count, privacy: .public): \(playerID, privacy: .public)")
 
+            // Log masked auth token info to help diagnose credential mismatches (do NOT log full token).
+            logger.debug("Auth token info: \(self.maskedTokenInfo(authToken), privacy: .private)")
+
             do {
                 guard let requestURL = Self.buildSavegameURL(baseURL: baseURL, gameId: gameId, playerID: playerID, saveGameKey: saveGameKey) else {
                     throw APIError.invalidURL
@@ -105,10 +116,15 @@ public final class KolibriAPIClient: Sendable {
 
                 var request = URLRequest(url: requestURL)
                 request.httpMethod = "GET"
-                request.setValue(authToken, forHTTPHeaderField: "Authorization")
+                // Capsule expects the Authorization header in the form: "Bearer <token>"
+                request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
                 request.setValue("IdleMiner/96354", forHTTPHeaderField: "User-Agent")
                 request.setValue("2022.3.62f2", forHTTPHeaderField: "X-Unity-Version")
                 request.setValue("*/*", forHTTPHeaderField: "Accept")
+
+                // Debug: record the outgoing request metadata (URL + masked auth) to logger
+                logger.debug("Request URL: \(requestURL.absoluteString, privacy: .public)")
+                logger.debug("Outgoing Authorization (masked): \(self.maskedTokenInfo(authToken), privacy: .private)")
 
                 let (data, response) = try await session.data(for: request)
 
@@ -121,6 +137,9 @@ public final class KolibriAPIClient: Sendable {
                 guard (200..<300).contains(httpResponse.statusCode) else {
                     let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
                     let apiError = APIError.httpError(statusCode: httpResponse.statusCode, message: errorMessage)
+
+                    // Log the response body for easier debugging of non-200 responses
+                    logger.debug("Error response body: \(errorMessage, privacy: .public)")
 
                     if httpResponse.statusCode == 404, index < candidatePlayerIDs.count - 1 {
                         logger.warning("Player candidate \(playerID, privacy: .public) returned 404, trying next candidate")
@@ -341,7 +360,10 @@ public final class KolibriAPIClient: Sendable {
 
     private static func buildSavegameURL(baseURL: String, gameId: String, playerID: String, saveGameKey: String) -> URL? {
         let encodedPlayerID = playerID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? playerID
-        let encodedSaveGameKey = saveGameKey.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? saveGameKey
+        var encodedSaveGameKey = saveGameKey.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? saveGameKey
+        if encodedSaveGameKey.isEmpty {
+            encodedSaveGameKey = "0"
+        }
         let urlString = "\(baseURL)/games/\(gameId)/players/\(encodedPlayerID)/savegame?saveGameKey=\(encodedSaveGameKey)"
         return URL(string: urlString)
     }

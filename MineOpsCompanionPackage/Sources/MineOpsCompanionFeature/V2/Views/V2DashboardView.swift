@@ -2,28 +2,37 @@ import SwiftUI
 
 struct V2DashboardView: View {
     @Environment(SMProgressService.self) private var progressService
+    @State private var syncService = KolibriSyncService.shared
+    @Binding private var selectedTab: V2RootTab
+
+    private let metadataStore = SyncMetadataStore.shared
+
+    init(selectedTab: Binding<V2RootTab>) {
+        self._selectedTab = selectedTab
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: MineOpsLayout.sectionSpacing) {
-                    // Overview
-                    overviewCards
-
-                    // Coverage by area
+                    syncStatusHeader
+                    strongestByAreaSection
+                    upgradeOpportunitiesSection
+                    quickActionsSection
+                    collectionSection
                     areaCoverage
-
-                    // Top unlocked SMs
-                    topManagersSection
-
-                    // Sync info
-                    syncInfoCard
                 }
                 .padding(MineOpsLayout.cardPadding)
             }
             .background(Color.mineDark.ignoresSafeArea())
-            .navigationTitle("MineOps")
+            .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
+        }
+    }
+
+    private var collectionSection: some View {
+        CardContainer(title: "Collection") {
+            overviewCards
         }
     }
 
@@ -72,53 +81,175 @@ struct V2DashboardView: View {
         }
     }
 
-    private var topManagersSection: some View {
-        CardContainer(title: "Top Unlocked") {
-            let top = progressService.progress
-                .filter(\.unlocked)
-                .sorted { $0.master.rarityPriority < $1.master.rarityPriority }
-                .prefix(8)
+    private var syncStatusHeader: some View {
+        CardContainer(title: "Sync Status") {
+            switch syncService.syncState {
+            case .syncing:
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Syncing game data…")
+                        .mineOpsBody()
+                    ProgressView()
+                }
 
-            if top.isEmpty {
-                Text("Sync game data to see your managers.")
-                    .mineOpsCaption()
-                    .foregroundStyle(.secondary)
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    ForEach(Array(top)) { sm in
-                        NavigationLink(destination: V2ManagerDetailView(sm: sm)) {
-                            HStack {
-                                Text(sm.master.name)
-                                    .font(.caption)
-                                    .lineLimit(1)
-                                Spacer()
-                                Text("Lv\(sm.level)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(8)
-                            .background(Color.mineDarkLight.opacity(0.5))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+            case .error:
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Couldn’t refresh game data")
+                        .mineOpsBody()
+                    if let lastSuccess = metadataStore.metadata.lastSuccessfulSyncAt {
+                        Text("Showing your last successful sync from \(relative(lastSuccess)).")
+                            .mineOpsCaption()
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("No previous sync found yet.")
+                            .mineOpsCaption()
+                            .foregroundStyle(.secondary)
+                    }
+                    MineOpsButton(label: "Try Again", icon: "arrow.clockwise") {
+                        Task { await syncService.syncAndApplyToProgress() }
+                    }
+                }
+
+            case .idle, .success:
+                if !syncService.hasUsableCredentials {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Connect Idle Miner to load your Super Managers")
+                            .mineOpsBody()
+                        MineOpsButton(label: "Connect Game", icon: "link") {
+                            selectedTab = .more
                         }
-                        .buttonStyle(.plain)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if let playerName = metadataStore.metadata.playerName, !playerName.isEmpty {
+                            Text(playerName)
+                                .font(.headline)
+                        } else {
+                            Text("Connected")
+                                .font(.headline)
+                        }
+
+                        if let lastSuccess = metadataStore.metadata.lastSuccessfulSyncAt {
+                            Text("Synced \(relative(lastSuccess))")
+                                .mineOpsCaption()
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("Not synced yet")
+                                .mineOpsCaption()
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let gameSave = metadataStore.metadata.lastGameSaveAt {
+                            Text("Game save: \(relative(gameSave))")
+                                .mineOpsCaption()
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Text("\(progressService.unlockedCount) managers unlocked")
+                            .mineOpsCaption()
+                            .foregroundStyle(.secondary)
+
+                        MineOpsButton(label: "Sync Now", icon: "arrow.clockwise") {
+                            Task { await syncService.syncAndApplyToProgress() }
+                        }
                     }
                 }
             }
         }
     }
 
-    private var syncInfoCard: some View {
-        CardContainer(title: "Sync") {
+    private var strongestByAreaSection: some View {
+        CardContainer(title: "Strongest by Area") {
             VStack(spacing: 8) {
-                Text("Manager data is pulled from Knight's Hub (idle-miners.com) on launch.")
-                    .mineOpsCaption()
-                    .foregroundStyle(.secondary)
+                strongestRow(for: .mineshaft)
+                strongestRow(for: .elevator)
+                strongestRow(for: .warehouse)
+            }
+        }
+    }
 
-                Text("Game progress is synced via the Sync tab using Kolibri API.")
-                    .mineOpsCaption()
+    @ViewBuilder
+    private func strongestRow(for dept: SMDepartment) -> some View {
+        if let strongest = progressService.strongestUnlockedManager(in: dept) {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(dept.displayName)
+                        .font(.caption)
+                        .foregroundStyle(areaColor(dept))
+                    Text(strongest.master.name)
+                        .font(.subheadline.bold())
+                    Text("Lv\(strongest.level) • R\(strongest.rank) • P\(strongest.promoted)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(String(format: "%.0f", strongest.effectiveActiveValue(using: SMMasterDataService.shared.activeScaling)))
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.accentCyan)
+            }
+        } else {
+            HStack {
+                Text(dept.displayName)
+                    .font(.caption)
+                    .foregroundStyle(areaColor(dept))
+                Spacer()
+                Text("No unlocked manager yet")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var upgradeOpportunitiesSection: some View {
+        CardContainer(title: "Ready to Improve") {
+            let opportunities = progressService.upgradeOpportunityManagers(limit: 4)
+            if opportunities.isEmpty {
+                Text("No fragment-backed upgrade opportunities yet.")
+                    .mineOpsCaption()
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(opportunities) { manager in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(manager.master.name)
+                                    .font(.subheadline)
+                                Text("\(manager.fragments) fragments available")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text("Lv\(manager.level)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var quickActionsSection: some View {
+        CardContainer(title: "Quick Actions") {
+            VStack(spacing: 8) {
+                MineOpsButton(label: "Sync Now", icon: "arrow.clockwise") {
+                    Task { await syncService.syncAndApplyToProgress() }
+                }
+                HStack(spacing: 8) {
+                    MineOpsButton(label: "View Managers", icon: "person.text.rectangle") {
+                        selectedTab = .managers
+                    }
+                    MineOpsButton(label: "Build Strategy", icon: "wand.and.stars") {
+                        selectedTab = .strategy
+                    }
+                }
+            }
+        }
+    }
+
+    private func relative(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     private func areaColor(_ dept: SMDepartment) -> Color {
@@ -126,18 +257,6 @@ struct V2DashboardView: View {
         case .mineshaft: return .accentOrange
         case .elevator: return .accentCyan
         case .warehouse: return .purple
-        }
-    }
-}
-
-extension SMMasterEntry {
-    fileprivate var rarityPriority: Int {
-        switch rarity.lowercased() {
-        case "legendary": return 0
-        case "epic": return 1
-        case "rare": return 2
-        case "common": return 3
-        default: return 4
         }
     }
 }

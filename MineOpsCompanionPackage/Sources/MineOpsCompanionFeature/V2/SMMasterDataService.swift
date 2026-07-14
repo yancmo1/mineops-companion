@@ -7,7 +7,7 @@ import OSLog
 public final class SMMasterDataService {
     public static let shared = SMMasterDataService()
 
-    public private(set) var masterData: [SMMasterEntry] = []
+    public var masterData: [SMMasterEntry] = []
     public private(set) var activeScaling: [String: SMActiveScaling] = [:]
     public private(set) var passiveTables: SMPassiveTables?
     public private(set) var isLoading = false

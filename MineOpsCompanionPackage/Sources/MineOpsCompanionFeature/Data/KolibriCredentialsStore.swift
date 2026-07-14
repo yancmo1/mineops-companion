@@ -2,89 +2,70 @@
 
 import Foundation
 
-/// Secure storage for Kolibri API credentials
+/// Secure storage for Kolibri API credentials backed by Keychain (no hardcoded defaults).
 @MainActor
 @Observable
 public final class KolibriCredentialsStore {
-    
     public static let shared = KolibriCredentialsStore()
-    
-    // MARK: - Storage Keys
-    
-    private enum Keys {
-        static let kolibriId = "com.yancmo1.mineops.kolibriId"
-        static let authToken = "com.yancmo1.mineops.kolibriAuthToken"
-        static let saveGameKey = "com.yancmo1.mineops.saveGameKey"
-    }
 
-    private enum HardcodedDefaults {
-        static let kolibriId = "dbffca92-27e9-485a-831a-feb5bfc2e3c4"
-        static let authToken = "M8XMbdJKrSZMZL2nxd2vH2tFWE6m7LaJwY7hNsTQavtZ65Xe8AztsR=="
-        static let saveGameKey = "0"
-    }
-    
     // MARK: - Properties
-    
+
+    /// Returns the resolved Kolibri ID (Keychain -> env -> nil). Empty string if not present.
     public var kolibriId: String {
-        get {
-            resolvedValue(forKey: Keys.kolibriId, fallback: HardcodedDefaults.kolibriId)
-        }
+        get { KolibriKeyStore.shared.resolvedKolibriID() ?? "" }
         set {
-            UserDefaults.standard.set(newValue, forKey: Keys.kolibriId)
+            do {
+                try KolibriKeyStore.shared.saveKolibriID(newValue.trimmingCharacters(in: .whitespacesAndNewlines))
+            } catch {
+                // Swallow errors silently; callers should surface UX-level errors when saving.
+            }
         }
     }
-    
+
     public var authToken: String {
-        get {
-            resolvedValue(forKey: Keys.authToken, fallback: HardcodedDefaults.authToken)
-        }
+        get { KolibriKeyStore.shared.resolvedAuthToken() ?? "" }
         set {
-            UserDefaults.standard.set(newValue, forKey: Keys.authToken)
+            do {
+                try KolibriKeyStore.shared.saveAuthToken(newValue.trimmingCharacters(in: .whitespacesAndNewlines))
+            } catch {
+                // ignore here; UI will surface errors when appropriate
+            }
         }
     }
-    
+
+    /// Save game key is stored in Keychain for parity with other credentials but is not sensitive.
     public var saveGameKey: String {
-        get {
-            resolvedValue(forKey: Keys.saveGameKey, fallback: HardcodedDefaults.saveGameKey)
-        }
+        // Default to "0" when no save game key is configured to match Capsule API expectations.
+        get { KolibriKeyStore.shared.resolvedSaveGameKey() ?? "0" }
         set {
-            UserDefaults.standard.set(newValue, forKey: Keys.saveGameKey)
+            do {
+                try KolibriKeyStore.shared.saveSaveGameKey(newValue.trimmingCharacters(in: .whitespacesAndNewlines))
+            } catch {
+                // ignore
+            }
         }
     }
 
-    public var usingHardcodedDefaults: Bool {
-        let hasStoredID = hasStoredValue(forKey: Keys.kolibriId)
-        let hasStoredToken = hasStoredValue(forKey: Keys.authToken)
-        return !hasStoredID && !hasStoredToken
-    }
-    
+    /// Hardcoded defaults removed — always false.
+    public var usingHardcodedDefaults: Bool { false }
+
     // MARK: - Computed Properties
-    
+
     public var hasCredentials: Bool {
-        !kolibriId.isEmpty && !authToken.isEmpty
+        !(kolibriId.isEmpty || authToken.isEmpty)
     }
-    
+
     // MARK: - Methods
-    
+
     public func clearCredentials() {
-        UserDefaults.standard.removeObject(forKey: Keys.kolibriId)
-        UserDefaults.standard.removeObject(forKey: Keys.authToken)
-        UserDefaults.standard.removeObject(forKey: Keys.saveGameKey)
+        KolibriKeyStore.shared.clearAllCredentials()
     }
 
-    private func hasStoredValue(forKey key: String) -> Bool {
-        guard let value = UserDefaults.standard.string(forKey: key) else { return false }
-        return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    public var maskedKolibriID: String {
+        let id = kolibriId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard id.count >= 3 else { return id }
+        return "••••• \(id.suffix(3))"
     }
 
-    private func resolvedValue(forKey key: String, fallback: String) -> String {
-        guard let value = UserDefaults.standard.string(forKey: key) else {
-            return fallback
-        }
-
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? fallback : trimmed
-    }
-    
     private init() {}
 }

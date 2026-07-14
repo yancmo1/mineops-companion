@@ -8,6 +8,7 @@ import UIKit
 @MainActor
 @Observable
 public final class KolibriSyncService {
+    public static let shared = KolibriSyncService()
     
     // MARK: - State
     
@@ -63,17 +64,14 @@ public final class KolibriSyncService {
     private var syncTask: Task<Void, Never>?
     
     // MARK: - Initialization
-    
-    public init() {
+
+    private init() {
         UserDefaults.standard.register(defaults: [
             "com.yancmo1.mineops.autoSyncEnabled": false,
             "com.yancmo1.mineops.syncInterval": 30.0
         ])
-
-        // Start auto-sync if enabled
-        if autoSyncEnabled {
-            startAutoSync()
-        }
+        // NOTE: Keep initialization lightweight. Do not start auto-sync by default.
+        // Start auto-sync only when explicitly enabled by the user.
     }
     
     // MARK: - Public Methods
@@ -88,13 +86,15 @@ public final class KolibriSyncService {
         guard credentialsStore.hasCredentials else {
             logger.warning("Cannot sync: missing credentials")
             syncState = .error("Missing Kolibri ID or Auth Token")
-            lastErrorDetails = "Add credentials in Settings or use the hardcoded defaults."
+            lastErrorDetails = "Add credentials in Settings or set KOLIBRI_ID / KOLIBRI_AUTH_TOKEN environment variables for development."
             return
         }
         
         syncState = .syncing
         lastErrorDetails = nil
         logger.info("Starting sync...")
+        // Record an attempt for metadata/troubleshooting
+        SyncMetadataStore.shared.recordAttempt()
         
         do {
             let result = try await apiClient.fetchSavegame(
@@ -107,7 +107,16 @@ public final class KolibriSyncService {
             lastDiagnostics = result.diagnostics
             lastSyncDate = Date()
             syncState = .success(lastSyncDate!)
-            
+
+            // Persist metadata about the successful sync
+            SyncMetadataStore.shared.recordSuccess(
+                playerName: result.savegame.saveGameData?.playerData?.playerName,
+                lastGameSaveAt: result.savegame.timestamp,
+                importedManagerCount: result.savegame.saveGameData?.managers?.count,
+                maskedPlayerID: credentialsStore.maskedKolibriID,
+                payloadFormat: result.diagnostics.payloadFormat
+            )
+
             logger.info("Sync completed successfully")
             
         } catch {
@@ -115,6 +124,23 @@ public final class KolibriSyncService {
             syncState = .error(error.localizedDescription)
             lastErrorDetails = Self.debugHint(for: error)
         }
+    }
+
+    /// Perform a full sync and apply the resulting manager roster to the shared progress service.
+    /// This method ensures a single orchestration path for manual and launch-triggered syncs.
+    public func syncAndApplyToProgress() async {
+        await sync()
+
+        guard case .success = syncState else { return }
+
+        let managers = getManagers()
+        guard !managers.isEmpty else {
+            setLastImportedManagerCount(0)
+            return
+        }
+
+        await SMProgressService.shared.applySyncData(managers: managers)
+        setLastImportedManagerCount(managers.count)
     }
 
     /// Build a roster that can be consumed by the Manager tab / strategy pipeline.
@@ -176,24 +202,24 @@ public final class KolibriSyncService {
     /// Start automatic syncing at the configured interval
     public func startAutoSync() {
         stopAutoSync() // Cancel any existing task
-        
+
+        // Instead of a continuous background loop, schedule a single delayed sync.
+        // This avoids continuous background network activity while preserving a simple scheduled option.
         syncTask = Task { [weak self] in
             guard let self else { return }
-            
-            logger.info("Auto-sync started with interval: \(self.syncInterval)s")
-            
-            // Initial sync
-            await self.sync()
-            
-            // Periodic sync
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(syncInterval))
-                
-                guard !Task.isCancelled else { break }
-                await self.sync()
+
+            logger.info("Scheduled one-off sync in \(self.syncInterval)s")
+
+            // Wait for the configured interval, then perform a single sync.
+            try? await Task.sleep(for: .seconds(syncInterval))
+            guard !Task.isCancelled else {
+                logger.info("Scheduled sync cancelled before running")
+                return
             }
-            
-            logger.info("Auto-sync stopped")
+
+            await self.sync()
+            logger.info("Scheduled one-off sync completed")
+            self.syncTask = nil
         }
     }
     
@@ -211,6 +237,11 @@ public final class KolibriSyncService {
     }
     
     // MARK: - Helper Methods
+
+    /// Expose whether the service has usable credentials to perform a sync.
+    public var hasUsableCredentials: Bool {
+        credentialsStore.hasCredentials
+    }
     
     /// Extract manager data from current savegame
     public func getManagers() -> [ManagerData] {

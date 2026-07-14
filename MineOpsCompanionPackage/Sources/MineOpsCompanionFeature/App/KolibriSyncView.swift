@@ -3,7 +3,7 @@
 import SwiftUI
 
 struct KolibriSyncView: View {
-    @State private var syncService = KolibriSyncService()
+    @State private var syncService = KolibriSyncService.shared
     @State private var showSettings = false
     @State private var isApplyingRoster = false
     private let masterService = SMMasterDataService.shared
@@ -309,24 +309,10 @@ struct KolibriSyncView: View {
 
     @MainActor
     private func runManualSync() async {
-        await syncService.sync()
-
-        guard case .success = syncService.syncState else {
-            return
-        }
-
         isApplyingRoster = true
         defer { isApplyingRoster = false }
 
-        let managers = syncService.getManagers()
-        guard !managers.isEmpty else {
-            syncService.setLastImportedManagerCount(0)
-            return
-        }
-
-        // Apply sync data to progress service
-        await SMProgressService.shared.applySyncData(managers: managers)
-        syncService.setLastImportedManagerCount(managers.count)
+        await syncService.syncAndApplyToProgress()
     }
 
     /// Resolve a human-readable name for a manager from master data, falling back to the raw id.

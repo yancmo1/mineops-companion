@@ -167,3 +167,25 @@ Append short entries here when changes affect:
 - **BUILD SUCCEEDED**, **TEST SUCCEEDED** on Yancy's Phone Sim
 - Follow-up: prune old V1 screens (CommandCenterV2, StrategyPipeline, StrategySummary, SnapshotHistory), wire image caching for sprites, add manual progress editing
 
+### 2026-07-14: Kolibri Capsule request hardening (auth + save slot fallback)
+- Updated Kolibri request auth header to use explicit bearer format (`Authorization: Bearer <token>`) in `KolibriAPIClient.fetchSavegame(...)`
+- Added response-body logging for non-2xx Capsule responses to improve runtime diagnosis without exposing full tokens
+- Fixed empty `saveGameKey` propagation by defaulting to `"0"` in `KolibriCredentialsStore.saveGameKey` and adding URL-layer fallback in `buildSavegameURL(...)`
+- Why: simulator logs showed requests were sent with `saveGameKey=` (empty), which correlated with repeated 404 failures despite valid masked token continuity
+- Validation on simulator `C76053FB-D4EB-4736-B906-6D8CF2976C10`: sync now succeeds and parses manager data (`Successfully fetched savegame data (managers: 60)`), and full test run completed with `** TEST SUCCEEDED **`
+- Follow-up: after stability window, consider reducing noisy debug logs or gating them behind a diagnostics toggle
+
+### 2026-07-14: Phase 6 metadata persistence follow-through
+- Expanded `SyncMetadata` to include `lastGameSaveDisplay` and `payloadFormat` so sync freshness and payload diagnostics persist across launches.
+- Updated `SyncMetadataStore.recordSuccess(...)` to persist display-ready game save time, payload format, and app build metadata (with automatic build fallback from bundle info).
+- Wired `KolibriSyncService` to pass `payloadFormat` from `KolibriFetchResult.diagnostics` into persisted metadata.
+- Added `SyncMetadataStoreTests` covering: persisted success metadata, failed-attempt preservation of previous successful sync timestamp, and masked-ID storage behavior.
+- Verification: app scheme tests pass on simulator `C76053FB-D4EB-4736-B906-6D8CF2976C10`; package-only tests are not currently runnable through the workspace test plan/scheme configuration.
+
+### 2026-07-14: Phase 7 Today screen restructure + tab actions
+- Refactored `V2DashboardView` into a Today-first layout: sync status header, strongest-by-area section, fragment-backed "Ready to Improve", quick actions, then collection and coverage.
+- Removed outdated sync explainer copy that referenced the old Sync tab and replaced with live sync/freshness status from `KolibriSyncService` + `SyncMetadataStore`.
+- Added deterministic recommendation helpers in `SMProgressService`: `strengthScore`, `strongestUnlockedManager(in:)`, `strongestByArea()`, and `upgradeOpportunityManagers(limit:)`.
+- Updated `ContentView` tab wiring with `V2RootTab` selection so Today quick actions can jump directly to Managers/Strategy tabs.
+- Validation: `xcodebuild ... test` succeeded on simulator `C76053FB-D4EB-4736-B906-6D8CF2976C10` after resolving compile-time SwiftUI inference/style issues.
+

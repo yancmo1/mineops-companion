@@ -10,6 +10,7 @@ DerivedData/
 .derivedData-mcp/
 .derivedData/
 *.xcuserstate
+*.xcresult
 
 ## Obj-C/Swift specific
 *.hmap
@@ -36,6 +37,7 @@ playground.xcworkspace
 # .swiftpm
 
 .build/
+.swiftpm/
 
 # CocoaPods
 #
@@ -70,12 +72,21 @@ fastlane/test_output
 # macOS
 .DS_Store
 
+# Local workspace caches and agent/editor artifacts
+.agent-backups/
+.cursor/
+
 # Editor / backup artifacts
 *.bak
 
 # Local secrets
-.env# Ignore Xcode shared scheme files (avoid committing environment secrets)
-MineOpsCompanion.xcodeproj/xcshareddata/xcschemes/*.xcscheme
-# Ignore local .env with real keys
 .env
+
+# Ignore Xcode shared scheme files (avoid committing environment secrets)
+MineOpsCompanion.xcodeproj/xcshareddata/xcschemes/*.xcscheme
+
+# Local Xcode build output and caches generated in repo root
+build/
+
 latest-samples/
+_archive/

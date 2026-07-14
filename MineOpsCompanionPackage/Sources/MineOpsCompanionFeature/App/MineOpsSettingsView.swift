@@ -147,10 +147,6 @@ struct MineOpsSettingsView: View {
                             Text("Credentials not configured")
                                 .font(.subheadline)
                                 .foregroundStyle(.orange)
-                        } else if KolibriCredentialsStore.shared.usingHardcodedDefaults {
-                            Text("Using hardcoded personal defaults")
-                                .font(.subheadline)
-                                .foregroundStyle(.yellow)
                         } else {
                             Text("Credentials configured")
                                 .font(.subheadline)
@@ -159,7 +155,8 @@ struct MineOpsSettingsView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 10) {
-                        TextField("Kolibri ID", text: $kolibriId)
+                        // Accept either a raw Kolibri UUID or a pasted debug string containing a UUID.
+                        TextField("Paste full debug ID or Kolibri UUID", text: $kolibriId)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
                             .accessibilityIdentifier("kolibriIdField")
@@ -210,7 +207,7 @@ struct MineOpsSettingsView: View {
                         }
                     }
                     
-                    Text("Hardcoded credentials are currently active for personal use. You can still override them here.")
+                    Text("Credentials are stored securely on-device (Keychain). Paste a full debug ID or the Kolibri UUID above and press Save.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -465,17 +462,30 @@ struct MineOpsSettingsView: View {
     }
     
     private func saveKolibriCredentials() {
-        let store = KolibriCredentialsStore.shared
-        store.kolibriId = kolibriId.trimmingCharacters(in: .whitespacesAndNewlines)
-        store.authToken = kolibriAuthToken.trimmingCharacters(in: .whitespacesAndNewlines)
-        store.saveGameKey = kolibriSaveGameKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        successMessage = "Kolibri credentials saved."
+        errorMessage = nil
+        successMessage = nil
+
+        // Try to extract a UUID from pasted debug ID strings
+        let candidate = kolibriId.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedID = KolibriDebugIDParser.extractLastUUID(from: candidate) ?? candidate
+
+        do {
+            try KolibriKeyStore.shared.saveKolibriID(resolvedID)
+            try KolibriKeyStore.shared.saveAuthToken(kolibriAuthToken.trimmingCharacters(in: .whitespacesAndNewlines))
+            try KolibriKeyStore.shared.saveSaveGameKey(kolibriSaveGameKey.trimmingCharacters(in: .whitespacesAndNewlines))
+
+            // Refresh local state
+            loadKolibriCredentials()
+            successMessage = "Kolibri credentials saved."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
-    
+
     private func clearKolibriCredentials() {
-        KolibriCredentialsStore.shared.clearCredentials()
+        KolibriKeyStore.shared.clearAllCredentials()
         loadKolibriCredentials()
-        successMessage = "Saved overrides cleared (hardcoded defaults remain active)."
+        successMessage = "Kolibri credentials cleared."
     }
 }
 
